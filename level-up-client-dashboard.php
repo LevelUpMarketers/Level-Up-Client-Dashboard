@@ -129,7 +129,7 @@ class Level_Up_Client_Dashboard {
 
         wp_register_script( 'lucd-admin', false, array( 'jquery' ), false, true );
         wp_enqueue_script( 'lucd-admin' );
-        $inline_js = <<<JS
+        $inline_js = <<<'JS'
 jQuery(function($){
     $('#lucd-add-client-form').on('submit', function(e){
         e.preventDefault();
