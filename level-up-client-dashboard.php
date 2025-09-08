@@ -124,7 +124,7 @@ class Level_Up_Client_Dashboard {
 
         wp_register_style( 'lucd-admin', false );
         wp_enqueue_style( 'lucd-admin' );
-        $css = '#lucd-add-client-form .lucd-field{display:inline-block;margin:0 20px 20px 0;}#lucd-feedback{margin-top:20px;}#lucd-feedback .spinner{float:none;margin:0 5px 0 0;}';
+        $css = '#lucd-add-client-form .lucd-field{display:inline-block;margin:0 20px 20px 0;vertical-align:top;}#lucd-add-client-form .lucd-field label{display:block;margin-bottom:4px;}#lucd-feedback{margin-top:20px;}#lucd-feedback .spinner{float:none;margin:0 5px 0 0;}';
         wp_add_inline_style( 'lucd-admin', $css );
 
         wp_register_script( 'lucd-admin', false, array( 'jquery' ), false, true );
@@ -253,7 +253,8 @@ JS;
 
         if ( false === $inserted ) {
             wp_delete_user( $user_id );
-            wp_send_json_error( __( 'Failed to insert client record.', 'level-up-client-dashboard' ) );
+            $error_message = $wpdb->last_error ? $wpdb->last_error : __( 'unknown database error', 'level-up-client-dashboard' );
+            wp_send_json_error( sprintf( __( 'Failed to insert client record: %s', 'level-up-client-dashboard' ), esc_html( $error_message ) ) );
         }
 
         wp_send_json_success( __( 'New Client Created Successfully!', 'level-up-client-dashboard' ) );
