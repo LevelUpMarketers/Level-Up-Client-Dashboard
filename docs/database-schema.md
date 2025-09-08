@@ -8,6 +8,7 @@ Stores individual client records and associated company information.
 | Column | Type | Description |
 | --- | --- | --- |
 | `client_id` | bigint(20) unsigned | Primary key. |
+| `wp_user_id` | bigint(20) unsigned | Associated WordPress user ID. |
 | `first_name` | varchar(100) | Client's first name. |
 | `last_name` | varchar(100) | Client's last name. |
 | `email` | varchar(100) | Unique email address for the client. |
@@ -35,4 +36,4 @@ Stores individual client records and associated company information.
 | `created_at` | datetime | Record creation timestamp. |
 | `updated_at` | datetime | Record last updated timestamp. |
 
-Future tables will reference `client_id` to relate records back to clients.
+Each client is associated with a WordPress user through `wp_user_id`. Future tables will reference `client_id` to relate records back to clients.
