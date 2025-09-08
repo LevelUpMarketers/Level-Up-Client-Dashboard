@@ -45,8 +45,19 @@ Tracks projects associated with a client.
 | --- | --- | --- |
 | `project_id` | bigint(20) unsigned | Primary key. |
 | `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
-| `project_name` | varchar(255) | Placeholder project title. |
+| `project_name` | varchar(255) | Name of the project. |
+| `start_date` | date | Date the project work began. |
+| `end_date` | date | Date the project was completed. |
+| `status` | varchar(100) | Current project status. |
+| `dev_link` | varchar(255) | URL to the development environment. |
+| `live_link` | varchar(255) | URL to the live site. |
+| `gdrive_link` | varchar(255) | Google Drive folder URL. |
+| `project_type` | varchar(100) | Type or category of project. |
+| `total_cost` | decimal(10,2) | Total project cost. |
+| `description` | text | Detailed project description. |
+| `project_updates` | longtext | Historical log of project updates. |
 | `created_at` | datetime | Record creation timestamp. |
+| `updated_at` | datetime | Record last updated timestamp. |
 
 ## `lucd_tickets`
 Stores support ticket metadata for clients.

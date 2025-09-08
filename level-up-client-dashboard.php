@@ -45,6 +45,7 @@ class Level_Up_Client_Dashboard {
         add_action( 'wp_ajax_lucd_add_client', array( __CLASS__, 'handle_add_client' ) );
         add_action( 'wp_ajax_lucd_get_client', array( __CLASS__, 'handle_get_client' ) );
         add_action( 'wp_ajax_lucd_update_client', array( __CLASS__, 'handle_update_client' ) );
+        add_action( 'wp_ajax_lucd_add_project', array( __CLASS__, 'handle_add_project' ) );
     }
 
     /**
@@ -111,7 +112,18 @@ class Level_Up_Client_Dashboard {
             project_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             client_id bigint(20) unsigned NOT NULL,
             project_name varchar(255) NOT NULL,
+            start_date date DEFAULT NULL,
+            end_date date DEFAULT NULL,
+            status varchar(100) DEFAULT '' NOT NULL,
+            dev_link varchar(255) DEFAULT '' NOT NULL,
+            live_link varchar(255) DEFAULT '' NOT NULL,
+            gdrive_link varchar(255) DEFAULT '' NOT NULL,
+            project_type varchar(100) DEFAULT '' NOT NULL,
+            total_cost decimal(10,2) DEFAULT 0 NOT NULL,
+            description text DEFAULT '' NOT NULL,
+            project_updates longtext DEFAULT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (project_id),
             KEY client_id (client_id)
         ) $charset_collate;";
@@ -164,7 +176,7 @@ class Level_Up_Client_Dashboard {
             self::$menu_slug,
             array( __CLASS__, 'render_client_management_page' ),
             'dashicons-groups',
-            26
+            60.1
         );
 
         add_menu_page(
@@ -174,7 +186,7 @@ class Level_Up_Client_Dashboard {
             self::$project_menu_slug,
             array( __CLASS__, 'render_project_management_page' ),
             'dashicons-clipboard',
-            27
+            60.2
         );
 
         add_menu_page(
@@ -184,7 +196,7 @@ class Level_Up_Client_Dashboard {
             self::$support_menu_slug,
             array( __CLASS__, 'render_support_management_page' ),
             'dashicons-sos',
-            28
+            60.3
         );
 
         add_menu_page(
@@ -194,7 +206,7 @@ class Level_Up_Client_Dashboard {
             self::$billing_menu_slug,
             array( __CLASS__, 'render_billing_management_page' ),
             'dashicons-money-alt',
-            29
+            60.4
         );
 
         add_menu_page(
@@ -204,7 +216,7 @@ class Level_Up_Client_Dashboard {
             self::$plugin_menu_slug,
             array( __CLASS__, 'render_plugin_management_page' ),
             'dashicons-admin-plugins',
-            30
+            60.5
         );
     }
 
@@ -231,10 +243,26 @@ class Level_Up_Client_Dashboard {
         $css = '.lucd-field{display:inline-block;margin:0 20px 20px 0;vertical-align:top;}.lucd-field label{display:block;margin-bottom:4px;}.lucd-feedback{margin-top:20px;}.lucd-feedback .spinner{float:none;margin:0 5px 0 0;}.lucd-accordion-header{cursor:pointer;margin:0;padding:10px;background:#f0f0f1;border:1px solid #dcdcde;}.lucd-accordion-content{display:none;border:1px solid #dcdcde;border-top:none;padding:10px;}';
         wp_add_inline_style( 'lucd-admin', $css );
 
-        wp_register_script( 'lucd-admin', false, array( 'jquery' ), false, true );
+        wp_register_script( 'lucd-admin', false, array( 'jquery', 'jquery-ui-autocomplete' ), false, true );
         wp_enqueue_script( 'lucd-admin' );
+
+        global $wpdb;
+        $client_table = self::get_table_name( self::$clients_table );
+        $client_rows  = $wpdb->get_results( "SELECT client_id, company_name, first_name, last_name FROM $client_table ORDER BY company_name ASC, last_name ASC", ARRAY_A );
+        $clients      = array();
+        foreach ( $client_rows as $row ) {
+            $name      = trim( $row['first_name'] . ' ' . $row['last_name'] );
+            $company   = trim( $row['company_name'] );
+            $label     = $company ? $company . ' - ' . $name : $name;
+            $clients[] = array(
+                'id'    => (int) $row['client_id'],
+                'label' => $label,
+            );
+        }
+
         wp_localize_script( 'lucd-admin', 'lucdAdmin', array(
             'getClientNonce' => wp_create_nonce( 'lucd_get_client' ),
+            'clients'        => $clients,
         ) );
         $inline_js = <<<'JS'
 jQuery(function($){
@@ -284,6 +312,42 @@ jQuery(function($){
         $.post(ajaxurl, data, function(response){
             $feedback.find('.spinner').removeClass('is-active');
             $feedback.find('p').text(response.data);
+        });
+    });
+
+    if(lucdAdmin.clients){
+        var clientLabels = [];
+        var clientMap = {};
+        $.each(lucdAdmin.clients, function(i, client){
+            clientLabels.push(client.label);
+            clientMap[client.label] = client.id;
+        });
+        $('#lucd-project-client').autocomplete({
+            source: clientLabels,
+            select: function(event, ui){
+                $('#lucd-project-client-id').val(clientMap[ui.item.value]);
+            },
+            change: function(event, ui){
+                if(!ui.item){
+                    $('#lucd-project-client-id').val('');
+                    $(this).val('');
+                }
+            }
+        });
+    }
+
+    $('#lucd-add-project-form').on('submit', function(e){
+        e.preventDefault();
+        var $form = $(this);
+        var $feedback = $('#lucd-project-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        $.post(ajaxurl, $form.serialize(), function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+            if(response.success){
+                $form[0].reset();
+            }
         });
     });
 });
@@ -618,13 +682,149 @@ JS;
     }
 
     /**
+     * Get definitions for project fields.
+     *
+     * @return array
+     */
+    private static function get_project_fields() {
+        return array(
+            'client_id'       => array( 'label' => __( 'Associated Client', 'level-up-client-dashboard' ), 'type' => 'client', 'required' => true ),
+            'project_name'    => array( 'label' => __( 'Project Name', 'level-up-client-dashboard' ), 'type' => 'text', 'required' => true ),
+            'start_date'      => array( 'label' => __( 'Project Start Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
+            'end_date'        => array( 'label' => __( 'Project End Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
+            'status'          => array( 'label' => __( 'Project Status', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'dev_link'        => array( 'label' => __( 'Project Development Link', 'level-up-client-dashboard' ), 'type' => 'url', 'sanitize' => 'esc_url_raw' ),
+            'live_link'       => array( 'label' => __( 'Project Live Link', 'level-up-client-dashboard' ), 'type' => 'url', 'sanitize' => 'esc_url_raw' ),
+            'gdrive_link'     => array( 'label' => __( 'Project Google Drive Link', 'level-up-client-dashboard' ), 'type' => 'url', 'sanitize' => 'esc_url_raw' ),
+            'project_type'    => array( 'label' => __( 'Project Type', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'total_cost'      => array( 'label' => __( 'Total Project Cost', 'level-up-client-dashboard' ), 'type' => 'number', 'sanitize' => 'floatval' ),
+            'description'     => array( 'label' => __( 'Project Description', 'level-up-client-dashboard' ), 'type' => 'textarea', 'sanitize' => 'sanitize_textarea_field' ),
+            'project_updates' => array( 'label' => __( 'Project Updates', 'level-up-client-dashboard' ), 'type' => 'textarea', 'sanitize' => 'sanitize_textarea_field' ),
+        );
+    }
+
+    /**
+     * Render project fields.
+     *
+     * @param array $project Optional project data.
+     */
+    private static function render_project_fields( $project = array() ) {
+        foreach ( self::get_project_fields() as $name => $field ) {
+            $value    = isset( $project[ $name ] ) ? $project[ $name ] : '';
+            $required = ! empty( $field['required'] ) ? ' required' : '';
+            if ( 'textarea' === $field['type'] ) {
+                printf(
+                    '<div class="lucd-field"><label for="%1$s">%2$s</label><textarea id="%1$s" name="%1$s"%4$s>%3$s</textarea></div>',
+                    esc_attr( $name ),
+                    esc_html( $field['label'] ),
+                    esc_textarea( $value ),
+                    $required
+                );
+            } elseif ( 'client' === $field['type'] ) {
+                $label = esc_html( $field['label'] );
+                echo '<div class="lucd-field"><label for="lucd-project-client">' . $label . '</label>';
+                echo '<input type="text" id="lucd-project-client" autocomplete="off" />';
+                echo '<input type="hidden" id="lucd-project-client-id" name="client_id" value="' . esc_attr( $value ) . '"' . $required . ' />';
+                echo '</div>';
+            } else {
+                $extra = '';
+                if ( 'number' === $field['type'] ) {
+                    $extra = ' step="0.01"';
+                }
+                printf(
+                    '<div class="lucd-field"><label for="%1$s">%2$s</label><input type="%3$s" id="%1$s" name="%1$s" value="%4$s"%5$s%6$s /></div>',
+                    esc_attr( $name ),
+                    esc_html( $field['label'] ),
+                    esc_attr( $field['type'] ),
+                    esc_attr( $value ),
+                    $required,
+                    $extra
+                );
+            }
+        }
+    }
+
+    /**
+     * Handle AJAX request to add a new project.
+     */
+    public static function handle_add_project() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'You are not allowed to perform this action.', 'level-up-client-dashboard' ) );
+        }
+
+        check_ajax_referer( 'lucd_add_project', 'lucd_project_nonce' );
+
+        $fields        = self::get_project_fields();
+        $project_data  = array();
+        $project_format = array();
+
+        foreach ( $fields as $field => $args ) {
+            if ( 'client' === $args['type'] ) {
+                $raw = isset( $_POST['client_id'] ) ? wp_unslash( $_POST['client_id'] ) : '';
+                $value = absint( $raw );
+                if ( ! $value ) {
+                    wp_send_json_error( __( 'Please select a valid client.', 'level-up-client-dashboard' ) );
+                }
+                $project_data['client_id'] = $value;
+                $project_format[] = '%d';
+                continue;
+            }
+
+            $raw = isset( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '';
+            if ( 'date' === $args['type'] && ! empty( $raw ) ) {
+                $value = date( 'Y-m-d', strtotime( $raw ) );
+            } elseif ( ! empty( $args['sanitize'] ) ) {
+                $value = call_user_func( $args['sanitize'], $raw );
+            } elseif ( 'number' === $args['type'] ) {
+                $value = floatval( $raw );
+            } else {
+                $value = sanitize_text_field( $raw );
+            }
+            $project_data[ $field ] = $value;
+            $project_format[]       = ( 'number' === $args['type'] ) ? '%f' : '%s';
+        }
+
+        global $wpdb;
+        $clients_table = self::get_table_name( self::$clients_table );
+        $client_exists = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $clients_table WHERE client_id = %d", $project_data['client_id'] ) );
+        if ( ! $client_exists ) {
+            wp_send_json_error( __( 'Selected client not found.', 'level-up-client-dashboard' ) );
+        }
+
+        $table_name = self::get_table_name( self::$projects_table );
+        $inserted   = $wpdb->insert( $table_name, $project_data, $project_format );
+
+        if ( false === $inserted ) {
+            $error_message = $wpdb->last_error ? $wpdb->last_error : __( 'unknown database error', 'level-up-client-dashboard' );
+            wp_send_json_error( sprintf( __( 'Failed to insert project record: %s', 'level-up-client-dashboard' ), esc_html( $error_message ) ) );
+        }
+
+        wp_send_json_success( __( 'New Project Created Successfully!', 'level-up-client-dashboard' ) );
+    }
+
+    /**
+     * Render the Add a New Project form.
+     */
+    private static function render_add_project_tab() {
+        ?>
+        <form id="lucd-add-project-form">
+            <?php self::render_project_fields(); ?>
+            <input type="hidden" name="action" value="lucd_add_project" />
+            <?php wp_nonce_field( 'lucd_add_project', 'lucd_project_nonce' ); ?>
+            <p><button type="submit" class="button button-primary"><?php esc_html_e( 'Add Project', 'level-up-client-dashboard' ); ?></button></p>
+        </form>
+        <div id="lucd-project-feedback" class="lucd-feedback"><span class="spinner"></span><p></p></div>
+        <?php
+    }
+
+    /**
      * Render the Project Management admin page with tabs.
      */
     public static function render_project_management_page() {
         $tabs = array(
             'add-project'    => array(
                 'label'    => __( 'Add a New Project', 'level-up-client-dashboard' ),
-                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+                'callback' => array( __CLASS__, 'render_add_project_tab' ),
             ),
             'manage-project' => array(
                 'label'    => __( 'Manage Projects', 'level-up-client-dashboard' ),
