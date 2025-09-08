@@ -46,6 +46,9 @@ class Level_Up_Client_Dashboard {
         add_action( 'wp_ajax_lucd_get_client', array( __CLASS__, 'handle_get_client' ) );
         add_action( 'wp_ajax_lucd_update_client', array( __CLASS__, 'handle_update_client' ) );
         add_action( 'wp_ajax_lucd_add_project', array( __CLASS__, 'handle_add_project' ) );
+        add_action( 'wp_ajax_lucd_get_projects', array( __CLASS__, 'handle_get_projects' ) );
+        add_action( 'wp_ajax_lucd_get_project', array( __CLASS__, 'handle_get_project' ) );
+        add_action( 'wp_ajax_lucd_update_project', array( __CLASS__, 'handle_update_project' ) );
     }
 
     /**
@@ -240,7 +243,13 @@ class Level_Up_Client_Dashboard {
 
         wp_register_style( 'lucd-admin', false );
         wp_enqueue_style( 'lucd-admin' );
-        $css = '.lucd-field{display:inline-block;margin:0 20px 20px 0;vertical-align:top;}.lucd-field label{display:block;margin-bottom:4px;}.lucd-feedback{margin-top:20px;}.lucd-feedback .spinner{float:none;margin:0 5px 0 0;}.lucd-accordion-header{cursor:pointer;margin:0;padding:10px;background:#f0f0f1;border:1px solid #dcdcde;}.lucd-accordion-content{display:none;border:1px solid #dcdcde;border-top:none;padding:10px;}';
+        $css  = '.lucd-field{display:inline-block;margin:0 20px 20px 0;vertical-align:top;}';
+        $css .= '.lucd-field label{display:block;margin-bottom:4px;}';
+        $css .= '.lucd-field input,.lucd-field select,.lucd-field textarea{min-width:180px;}';
+        $css .= '.lucd-feedback{margin-top:20px;}';
+        $css .= '.lucd-feedback .spinner{float:none;margin:0 5px 0 0;}';
+        $css .= '.lucd-accordion-header{cursor:pointer;margin:0;padding:10px;background:#f0f0f1;border:1px solid #dcdcde;}';
+        $css .= '.lucd-accordion-content{display:none;border:1px solid #dcdcde;border-top:none;padding:10px;}';
         wp_add_inline_style( 'lucd-admin', $css );
 
         wp_register_script( 'lucd-admin', false, array( 'jquery', 'jquery-ui-autocomplete' ), false, true );
@@ -261,8 +270,13 @@ class Level_Up_Client_Dashboard {
         }
 
         wp_localize_script( 'lucd-admin', 'lucdAdmin', array(
-            'getClientNonce' => wp_create_nonce( 'lucd_get_client' ),
-            'clients'        => $clients,
+            'getClientNonce'   => wp_create_nonce( 'lucd_get_client' ),
+            'getProjectsNonce' => wp_create_nonce( 'lucd_get_projects' ),
+            'getProjectNonce'  => wp_create_nonce( 'lucd_get_project' ),
+            'clients'          => $clients,
+            'i18n'             => array(
+                'selectClient' => __( 'Please select an existing client.', 'level-up-client-dashboard' ),
+            ),
         ) );
         $inline_js = <<<'JS'
 jQuery(function($){
@@ -282,24 +296,61 @@ jQuery(function($){
         });
     });
 
+    var clientLabels = [], clientMap = {};
+    if(lucdAdmin.clients){
+        $.each(lucdAdmin.clients, function(i, client){
+            clientLabels.push(client.label);
+            clientMap[client.label] = client.id;
+        });
+    }
+
+    function setupClientAutocomplete($context){
+        var $input = $context.find('.lucd-project-client');
+        if(!$input.length){ return; }
+        var $hidden = $context.find('.lucd-project-client-id');
+        $input.autocomplete({
+            source: clientLabels,
+            select: function(event, ui){
+                $hidden.val(clientMap[ui.item.value]);
+            },
+            change: function(event, ui){
+                if(!ui.item){
+                    $hidden.val('');
+                    $(this).val('');
+                }
+            }
+        }).on('input', function(){
+            $hidden.val('');
+        });
+    }
+
     $(document).on('click', '.lucd-accordion-header', function(){
         var $header = $(this);
         var $content = $header.next('.lucd-accordion-content');
         $content.toggle();
-        if(!$content.data('loaded')){
-            $content.html('<span class="spinner is-active"></span>');
-            $.post(ajaxurl, {
-                action: 'lucd_get_client',
-                client_id: $header.data('client-id'),
-                nonce: lucdAdmin.getClientNonce
-            }, function(response){
-                if(response.success){
-                    $content.html(response.data).data('loaded', true);
-                } else {
-                    $content.html('<p>'+response.data+'</p>');
-                }
-            });
+        if($content.data('loaded')){
+            return;
         }
+        var action = $header.data('action');
+        if(!action){
+            return;
+        }
+        $content.html('<span class="spinner is-active"></span>');
+        var data = {action: action, nonce: lucdAdmin[$header.data('nonce')]};
+        if($header.data('client-id')){
+            data.client_id = $header.data('client-id');
+        }
+        if($header.data('project-id')){
+            data.project_id = $header.data('project-id');
+        }
+        $.post(ajaxurl, data, function(response){
+            if(response.success){
+                $content.html(response.data).data('loaded', true);
+                setupClientAutocomplete($content);
+            } else {
+                $content.html('<p>'+response.data+'</p>');
+            }
+        });
     });
 
     $(document).on('submit', '.lucd-edit-client-form', function(e){
@@ -315,33 +366,19 @@ jQuery(function($){
         });
     });
 
-    if(lucdAdmin.clients){
-        var clientLabels = [];
-        var clientMap = {};
-        $.each(lucdAdmin.clients, function(i, client){
-            clientLabels.push(client.label);
-            clientMap[client.label] = client.id;
-        });
-        $('#lucd-project-client').autocomplete({
-            source: clientLabels,
-            select: function(event, ui){
-                $('#lucd-project-client-id').val(clientMap[ui.item.value]);
-            },
-            change: function(event, ui){
-                if(!ui.item){
-                    $('#lucd-project-client-id').val('');
-                    $(this).val('');
-                }
-            }
-        });
-    }
-
     $('#lucd-add-project-form').on('submit', function(e){
         e.preventDefault();
         var $form = $(this);
         var $feedback = $('#lucd-project-feedback');
         $feedback.find('p').text('');
         $feedback.find('.spinner').addClass('is-active');
+        var label = $form.find('.lucd-project-client').val();
+        var clientId = $form.find('.lucd-project-client-id').val();
+        if(!clientId || !clientMap[label] || clientMap[label] != clientId){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(lucdAdmin.i18n.selectClient);
+            return;
+        }
         $.post(ajaxurl, $form.serialize(), function(response){
             $feedback.find('.spinner').removeClass('is-active');
             $feedback.find('p').text(response.data);
@@ -350,6 +387,28 @@ jQuery(function($){
             }
         });
     });
+
+    $(document).on('submit', '.lucd-edit-project-form', function(e){
+        e.preventDefault();
+        var $form = $(this);
+        var data = $form.serialize();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        var label = $form.find('.lucd-project-client').val();
+        var clientId = $form.find('.lucd-project-client-id').val();
+        if(!clientId || !clientMap[label] || clientMap[label] != clientId){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(lucdAdmin.i18n.selectClient);
+            return;
+        }
+        $.post(ajaxurl, data, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+        });
+    });
+
+    setupClientAutocomplete($('#lucd-add-project-form'));
 });
 JS;
         wp_add_inline_script( 'lucd-admin', $inline_js );
@@ -674,11 +733,32 @@ JS;
             $company_name = trim( $client->company_name );
             $display      = $company_name ? $company_name . ' - ' . $name : $name;
             echo '<div class="lucd-accordion">';
-            echo '<h3 class="lucd-accordion-header" data-client-id="' . esc_attr( $client->client_id ) . '">' . esc_html( $display ) . '</h3>';
+            echo '<h3 class="lucd-accordion-header" data-action="lucd_get_client" data-nonce="getClientNonce" data-client-id="' . esc_attr( $client->client_id ) . '">' . esc_html( $display ) . '</h3>';
             echo '<div class="lucd-accordion-content"></div>';
             echo '</div>';
         }
         echo '</div>';
+    }
+
+    /**
+     * Get display label for a client.
+     *
+     * @param int $client_id Client ID.
+     * @return string
+     */
+    private static function get_client_label( $client_id ) {
+        if ( ! $client_id ) {
+            return '';
+        }
+        global $wpdb;
+        $table = self::get_table_name( self::$clients_table );
+        $row   = $wpdb->get_row( $wpdb->prepare( "SELECT company_name, first_name, last_name FROM $table WHERE client_id = %d", $client_id ), ARRAY_A );
+        if ( ! $row ) {
+            return '';
+        }
+        $name    = trim( $row['first_name'] . ' ' . $row['last_name'] );
+        $company = trim( $row['company_name'] );
+        return $company ? $company . ' - ' . $name : $name;
     }
 
     /**
@@ -721,10 +801,13 @@ JS;
                     $required
                 );
             } elseif ( 'client' === $field['type'] ) {
-                $label = esc_html( $field['label'] );
-                echo '<div class="lucd-field"><label for="lucd-project-client">' . $label . '</label>';
-                echo '<input type="text" id="lucd-project-client" autocomplete="off" />';
-                echo '<input type="hidden" id="lucd-project-client-id" name="client_id" value="' . esc_attr( $value ) . '"' . $required . ' />';
+                $label      = esc_html( $field['label'] );
+                $input_id   = uniqid( 'lucd-project-client-' );
+                $hidden_id  = $input_id . '-id';
+                $client_label = self::get_client_label( (int) $value );
+                echo '<div class="lucd-field"><label for="' . esc_attr( $input_id ) . '">' . $label . '</label>';
+                echo '<input type="text" id="' . esc_attr( $input_id ) . '" class="lucd-project-client" autocomplete="off" value="' . esc_attr( $client_label ) . '" />';
+                echo '<input type="hidden" id="' . esc_attr( $hidden_id ) . '" class="lucd-project-client-id" name="client_id" value="' . esc_attr( $value ) . '"' . $required . ' />';
                 echo '</div>';
             } else {
                 $extra = '';
@@ -803,6 +886,143 @@ JS;
     }
 
     /**
+     * Handle AJAX request to fetch projects for a client.
+     */
+    public static function handle_get_projects() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'You are not allowed to perform this action.', 'level-up-client-dashboard' ) );
+        }
+
+        check_ajax_referer( 'lucd_get_projects', 'nonce' );
+
+        $client_id = isset( $_POST['client_id'] ) ? absint( $_POST['client_id'] ) : 0;
+        if ( ! $client_id ) {
+            wp_send_json_error( __( 'Invalid client ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+        $projects_table = self::get_table_name( self::$projects_table );
+        $projects       = $wpdb->get_results( $wpdb->prepare( "SELECT project_id, project_name FROM $projects_table WHERE client_id = %d ORDER BY project_name ASC", $client_id ), ARRAY_A );
+
+        if ( empty( $projects ) ) {
+            wp_send_json_success( '<p>' . esc_html__( 'No projects found.', 'level-up-client-dashboard' ) . '</p>' );
+        }
+
+        ob_start();
+        foreach ( $projects as $project ) {
+            echo '<div class="lucd-accordion">';
+            echo '<h4 class="lucd-accordion-header" data-action="lucd_get_project" data-nonce="getProjectNonce" data-project-id="' . esc_attr( $project['project_id'] ) . '">' . esc_html( $project['project_name'] ) . '</h4>';
+            echo '<div class="lucd-accordion-content"></div>';
+            echo '</div>';
+        }
+        $html = ob_get_clean();
+
+        wp_send_json_success( $html );
+    }
+
+    /**
+     * Handle AJAX request to fetch a single project's data.
+     */
+    public static function handle_get_project() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'You are not allowed to perform this action.', 'level-up-client-dashboard' ) );
+        }
+
+        check_ajax_referer( 'lucd_get_project', 'nonce' );
+
+        $project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+        if ( ! $project_id ) {
+            wp_send_json_error( __( 'Invalid project ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+        $table   = self::get_table_name( self::$projects_table );
+        $project = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE project_id = %d", $project_id ), ARRAY_A );
+
+        if ( ! $project ) {
+            wp_send_json_error( __( 'Project not found.', 'level-up-client-dashboard' ) );
+        }
+
+        ob_start();
+        ?>
+        <form class="lucd-edit-project-form">
+            <?php self::render_project_fields( $project ); ?>
+            <input type="hidden" name="action" value="lucd_update_project" />
+            <input type="hidden" name="project_id" value="<?php echo esc_attr( $project_id ); ?>" />
+            <?php wp_nonce_field( 'lucd_update_project', 'lucd_update_project_nonce' ); ?>
+            <p><button type="submit" class="button button-primary"><?php esc_html_e( 'Update Project', 'level-up-client-dashboard' ); ?></button></p>
+        </form>
+        <div class="lucd-feedback"><span class="spinner"></span><p></p></div>
+        <?php
+        $form = ob_get_clean();
+
+        wp_send_json_success( $form );
+    }
+
+    /**
+     * Handle AJAX request to update a project.
+     */
+    public static function handle_update_project() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'You are not allowed to perform this action.', 'level-up-client-dashboard' ) );
+        }
+
+        check_ajax_referer( 'lucd_update_project', 'lucd_update_project_nonce' );
+
+        $project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+        if ( ! $project_id ) {
+            wp_send_json_error( __( 'Invalid project ID.', 'level-up-client-dashboard' ) );
+        }
+
+        $fields        = self::get_project_fields();
+        $project_data  = array();
+        $project_format = array();
+
+        foreach ( $fields as $field => $args ) {
+            if ( 'client' === $args['type'] ) {
+                $raw   = isset( $_POST['client_id'] ) ? wp_unslash( $_POST['client_id'] ) : '';
+                $value = absint( $raw );
+                if ( ! $value ) {
+                    wp_send_json_error( __( 'Please select a valid client.', 'level-up-client-dashboard' ) );
+                }
+                $project_data['client_id'] = $value;
+                $project_format[]          = '%d';
+                continue;
+            }
+
+            $raw = isset( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '';
+            if ( 'date' === $args['type'] && ! empty( $raw ) ) {
+                $value = date( 'Y-m-d', strtotime( $raw ) );
+            } elseif ( ! empty( $args['sanitize'] ) ) {
+                $value = call_user_func( $args['sanitize'], $raw );
+            } elseif ( 'number' === $args['type'] ) {
+                $value = floatval( $raw );
+            } else {
+                $value = sanitize_text_field( $raw );
+            }
+            $project_data[ $field ] = $value;
+            $project_format[]       = ( 'number' === $args['type'] ) ? '%f' : '%s';
+        }
+
+        global $wpdb;
+        $clients_table = self::get_table_name( self::$clients_table );
+        $client_exists = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $clients_table WHERE client_id = %d", $project_data['client_id'] ) );
+        if ( ! $client_exists ) {
+            wp_send_json_error( __( 'Selected client not found.', 'level-up-client-dashboard' ) );
+        }
+
+        $table_name = self::get_table_name( self::$projects_table );
+        $updated    = $wpdb->update( $table_name, $project_data, array( 'project_id' => $project_id ), $project_format, array( '%d' ) );
+
+        if ( false === $updated ) {
+            $error_message = $wpdb->last_error ? $wpdb->last_error : __( 'unknown database error', 'level-up-client-dashboard' );
+            wp_send_json_error( sprintf( __( 'Failed to update project record: %s', 'level-up-client-dashboard' ), esc_html( $error_message ) ) );
+        }
+
+        wp_send_json_success( __( 'Project updated successfully!', 'level-up-client-dashboard' ) );
+    }
+
+    /**
      * Render the Add a New Project form.
      */
     private static function render_add_project_tab() {
@@ -818,6 +1038,32 @@ JS;
     }
 
     /**
+     * Render the Manage Projects tab.
+     */
+    private static function render_manage_projects_tab() {
+        global $wpdb;
+        $clients_table = self::get_table_name( self::$clients_table );
+        $clients = $wpdb->get_results( "SELECT client_id, company_name, first_name, last_name FROM $clients_table ORDER BY company_name ASC, last_name ASC" );
+
+        if ( empty( $clients ) ) {
+            echo '<p>' . esc_html__( 'No clients found.', 'level-up-client-dashboard' ) . '</p>';
+            return;
+        }
+
+        echo '<div id="lucd-manage-projects">';
+        foreach ( $clients as $client ) {
+            $name   = trim( $client->first_name . ' ' . $client->last_name );
+            $company = trim( $client->company_name );
+            $display = $company ? $company . ' - ' . $name : $name;
+            echo '<div class="lucd-accordion">';
+            echo '<h3 class="lucd-accordion-header" data-action="lucd_get_projects" data-nonce="getProjectsNonce" data-client-id="' . esc_attr( $client->client_id ) . '">' . esc_html( $display ) . '</h3>';
+            echo '<div class="lucd-accordion-content"></div>';
+            echo '</div>';
+        }
+        echo '</div>';
+    }
+
+    /**
      * Render the Project Management admin page with tabs.
      */
     public static function render_project_management_page() {
@@ -828,7 +1074,7 @@ JS;
             ),
             'manage-project' => array(
                 'label'    => __( 'Manage Projects', 'level-up-client-dashboard' ),
-                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+                'callback' => array( __CLASS__, 'render_manage_projects_tab' ),
             ),
         );
 
