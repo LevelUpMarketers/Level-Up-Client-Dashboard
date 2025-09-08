@@ -484,7 +484,7 @@ JS;
     private static function render_edit_clients_tab() {
         global $wpdb;
         $table   = self::get_clients_table_name();
-        $clients = $wpdb->get_results( "SELECT client_id, first_name, last_name FROM $table ORDER BY last_name ASC" );
+        $clients = $wpdb->get_results( "SELECT client_id, company_name, first_name, last_name FROM $table ORDER BY company_name ASC, last_name ASC" );
 
         if ( empty( $clients ) ) {
             echo '<p>' . esc_html__( 'No clients found.', 'level-up-client-dashboard' ) . '</p>';
@@ -493,9 +493,11 @@ JS;
 
         echo '<div id="lucd-edit-clients">';
         foreach ( $clients as $client ) {
-            $name = trim( $client->first_name . ' ' . $client->last_name );
+            $name         = trim( $client->first_name . ' ' . $client->last_name );
+            $company_name = trim( $client->company_name );
+            $display      = $company_name ? $company_name . ' - ' . $name : $name;
             echo '<div class="lucd-accordion">';
-            echo '<h3 class="lucd-accordion-header" data-client-id="' . esc_attr( $client->client_id ) . '">' . esc_html( $name ) . '</h3>';
+            echo '<h3 class="lucd-accordion-header" data-client-id="' . esc_attr( $client->client_id ) . '">' . esc_html( $display ) . '</h3>';
             echo '<div class="lucd-accordion-content"></div>';
             echo '</div>';
         }
