@@ -22,10 +22,73 @@ class Level_Up_Client_Dashboard {
     private static $menu_slug = 'lucd-client-management';
 
     /**
+     * Base name for clients table.
+     *
+     * @var string
+     */
+    private static $clients_table = 'lucd_clients';
+
+    /**
      * Initialize plugin hooks.
      */
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'register_admin_menu' ) );
+    }
+
+    /**
+     * Get the full clients table name with prefix.
+     *
+     * @global wpdb $wpdb WordPress database abstraction object.
+     * @return string
+     */
+    private static function get_clients_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . self::$clients_table;
+    }
+
+    /**
+     * Plugin activation callback to create required tables.
+     */
+    public static function activate() {
+        global $wpdb;
+
+        $table_name      = self::get_clients_table_name();
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+            client_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            first_name varchar(100) NOT NULL,
+            last_name varchar(100) NOT NULL,
+            email varchar(100) NOT NULL,
+            mailing_address1 varchar(255) DEFAULT '' NOT NULL,
+            mailing_address2 varchar(255) DEFAULT '' NOT NULL,
+            mailing_city varchar(100) DEFAULT '' NOT NULL,
+            mailing_state varchar(100) DEFAULT '' NOT NULL,
+            mailing_postcode varchar(20) DEFAULT '' NOT NULL,
+            mailing_country varchar(100) DEFAULT '' NOT NULL,
+            company_name varchar(255) NOT NULL,
+            company_website varchar(255) DEFAULT '' NOT NULL,
+            company_address1 varchar(255) DEFAULT '' NOT NULL,
+            company_address2 varchar(255) DEFAULT '' NOT NULL,
+            company_city varchar(100) DEFAULT '' NOT NULL,
+            company_state varchar(100) DEFAULT '' NOT NULL,
+            company_postcode varchar(20) DEFAULT '' NOT NULL,
+            company_country varchar(100) DEFAULT '' NOT NULL,
+            social_facebook varchar(255) DEFAULT '' NOT NULL,
+            social_twitter varchar(255) DEFAULT '' NOT NULL,
+            social_instagram varchar(255) DEFAULT '' NOT NULL,
+            social_linkedin varchar(255) DEFAULT '' NOT NULL,
+            social_yelp varchar(255) DEFAULT '' NOT NULL,
+            social_bbb varchar(255) DEFAULT '' NOT NULL,
+            client_since date NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (client_id),
+            UNIQUE KEY email (email)
+        ) $charset_collate;";
+
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        dbDelta( $sql );
     }
 
     /**
@@ -86,5 +149,6 @@ class Level_Up_Client_Dashboard {
     }
 }
 
+register_activation_hook( __FILE__, array( 'Level_Up_Client_Dashboard', 'activate' ) );
 Level_Up_Client_Dashboard::init();
 

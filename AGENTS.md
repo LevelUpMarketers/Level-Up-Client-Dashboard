@@ -12,3 +12,6 @@ This repository contains a WordPress plugin for a client management dashboard.
 ## Testing
 - After modifying PHP files, run `php -l` on each changed file.
 
+## Documentation
+- When database structures change, update existing documentation to reflect the new schema. Overwrite outdated docs rather than creating redundant files.
+
