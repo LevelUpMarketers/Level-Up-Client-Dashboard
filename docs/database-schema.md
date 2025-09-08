@@ -37,3 +37,43 @@ Stores individual client records and associated company information.
 | `updated_at` | datetime | Record last updated timestamp. |
 
 Each client is associated with a WordPress user through `wp_user_id`. Future tables will reference `client_id` to relate records back to clients.
+
+## `lucd_projects`
+Tracks projects associated with a client.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `project_id` | bigint(20) unsigned | Primary key. |
+| `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
+| `project_name` | varchar(255) | Placeholder project title. |
+| `created_at` | datetime | Record creation timestamp. |
+
+## `lucd_tickets`
+Stores support ticket metadata for clients.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `ticket_id` | bigint(20) unsigned | Primary key. |
+| `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
+| `subject` | varchar(255) | Placeholder ticket subject. |
+| `created_at` | datetime | Record creation timestamp. |
+
+## `lucd_billing`
+Captures basic billing records.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `billing_id` | bigint(20) unsigned | Primary key. |
+| `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
+| `invoice_number` | varchar(100) | Placeholder invoice identifier. |
+| `created_at` | datetime | Record creation timestamp. |
+
+## `lucd_plugins`
+Lists plugins associated with a client.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `plugin_id` | bigint(20) unsigned | Primary key. |
+| `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
+| `plugin_name` | varchar(255) | Placeholder plugin name. |
+| `created_at` | datetime | Record creation timestamp. |

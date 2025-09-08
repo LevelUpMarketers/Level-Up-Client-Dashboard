@@ -15,18 +15,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Level_Up_Client_Dashboard {
 
     /**
-     * Admin menu slug.
+     * Admin menu slugs.
      *
      * @var string
      */
-    private static $menu_slug = 'lucd-client-management';
+    private static $menu_slug         = 'lucd-client-management';
+    private static $project_menu_slug = 'lucd-project-management';
+    private static $support_menu_slug = 'lucd-support-management';
+    private static $billing_menu_slug = 'lucd-billing-management';
+    private static $plugin_menu_slug  = 'lucd-plugin-management';
 
     /**
-     * Base name for clients table.
+     * Base names for custom tables.
      *
      * @var string
      */
-    private static $clients_table = 'lucd_clients';
+    private static $clients_table  = 'lucd_clients';
+    private static $projects_table = 'lucd_projects';
+    private static $tickets_table  = 'lucd_tickets';
+    private static $billing_table  = 'lucd_billing';
+    private static $plugins_table  = 'lucd_plugins';
 
     /**
      * Initialize plugin hooks.
@@ -40,14 +48,15 @@ class Level_Up_Client_Dashboard {
     }
 
     /**
-     * Get the full clients table name with prefix.
+     * Get the full table name with prefix.
      *
      * @global wpdb $wpdb WordPress database abstraction object.
+     * @param string $base Base table name.
      * @return string
      */
-    private static function get_clients_table_name() {
+    private static function get_table_name( $base ) {
         global $wpdb;
-        return $wpdb->prefix . self::$clients_table;
+        return $wpdb->prefix . $base;
     }
 
     /**
@@ -56,10 +65,15 @@ class Level_Up_Client_Dashboard {
     public static function activate() {
         global $wpdb;
 
-        $table_name      = self::get_clients_table_name();
         $charset_collate = $wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE $table_name (
+        $clients_table  = self::get_table_name( self::$clients_table );
+        $projects_table = self::get_table_name( self::$projects_table );
+        $tickets_table  = self::get_table_name( self::$tickets_table );
+        $billing_table  = self::get_table_name( self::$billing_table );
+        $plugins_table  = self::get_table_name( self::$plugins_table );
+
+        $clients_sql = "CREATE TABLE $clients_table (
             client_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             wp_user_id bigint(20) unsigned NOT NULL,
             first_name varchar(100) NOT NULL,
@@ -93,8 +107,48 @@ class Level_Up_Client_Dashboard {
             UNIQUE KEY wp_user_id (wp_user_id)
         ) $charset_collate;";
 
+        $projects_sql = "CREATE TABLE $projects_table (
+            project_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            client_id bigint(20) unsigned NOT NULL,
+            project_name varchar(255) NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (project_id),
+            KEY client_id (client_id)
+        ) $charset_collate;";
+
+        $tickets_sql = "CREATE TABLE $tickets_table (
+            ticket_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            client_id bigint(20) unsigned NOT NULL,
+            subject varchar(255) NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (ticket_id),
+            KEY client_id (client_id)
+        ) $charset_collate;";
+
+        $billing_sql = "CREATE TABLE $billing_table (
+            billing_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            client_id bigint(20) unsigned NOT NULL,
+            invoice_number varchar(100) NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (billing_id),
+            KEY client_id (client_id)
+        ) $charset_collate;";
+
+        $plugins_sql = "CREATE TABLE $plugins_table (
+            plugin_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            client_id bigint(20) unsigned NOT NULL,
+            plugin_name varchar(255) NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (plugin_id),
+            KEY client_id (client_id)
+        ) $charset_collate;";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta( $sql );
+        dbDelta( $clients_sql );
+        dbDelta( $projects_sql );
+        dbDelta( $tickets_sql );
+        dbDelta( $billing_sql );
+        dbDelta( $plugins_sql );
     }
 
     /**
@@ -112,6 +166,46 @@ class Level_Up_Client_Dashboard {
             'dashicons-groups',
             26
         );
+
+        add_menu_page(
+            __( 'Project Management', 'level-up-client-dashboard' ),
+            __( 'Project Management', 'level-up-client-dashboard' ),
+            $capability,
+            self::$project_menu_slug,
+            array( __CLASS__, 'render_project_management_page' ),
+            'dashicons-clipboard',
+            27
+        );
+
+        add_menu_page(
+            __( 'Support Ticket Management', 'level-up-client-dashboard' ),
+            __( 'Support Ticket Management', 'level-up-client-dashboard' ),
+            $capability,
+            self::$support_menu_slug,
+            array( __CLASS__, 'render_support_management_page' ),
+            'dashicons-sos',
+            28
+        );
+
+        add_menu_page(
+            __( 'Billing Management', 'level-up-client-dashboard' ),
+            __( 'Billing Management', 'level-up-client-dashboard' ),
+            $capability,
+            self::$billing_menu_slug,
+            array( __CLASS__, 'render_billing_management_page' ),
+            'dashicons-money-alt',
+            29
+        );
+
+        add_menu_page(
+            __( 'Plugin Management', 'level-up-client-dashboard' ),
+            __( 'Plugin Management', 'level-up-client-dashboard' ),
+            $capability,
+            self::$plugin_menu_slug,
+            array( __CLASS__, 'render_plugin_management_page' ),
+            'dashicons-admin-plugins',
+            30
+        );
     }
 
     /**
@@ -120,7 +214,15 @@ class Level_Up_Client_Dashboard {
      * @param string $hook Current admin page hook.
      */
     public static function enqueue_admin_assets( $hook ) {
-        if ( 'toplevel_page_' . self::$menu_slug !== $hook ) {
+        $allowed_hooks = array(
+            'toplevel_page_' . self::$menu_slug,
+            'toplevel_page_' . self::$project_menu_slug,
+            'toplevel_page_' . self::$support_menu_slug,
+            'toplevel_page_' . self::$billing_menu_slug,
+            'toplevel_page_' . self::$plugin_menu_slug,
+        );
+
+        if ( ! in_array( $hook, $allowed_hooks, true ) ) {
             return;
         }
 
@@ -303,7 +405,7 @@ JS;
         $client_data['wp_user_id'] = $user_id;
         $client_format[]           = '%d';
 
-        $table_name = self::get_clients_table_name();
+        $table_name = self::get_table_name( self::$clients_table );
         global $wpdb;
         $inserted = $wpdb->insert( $table_name, $client_data, $client_format );
 
@@ -332,7 +434,7 @@ JS;
         }
 
         global $wpdb;
-        $table  = self::get_clients_table_name();
+        $table  = self::get_table_name( self::$clients_table );
         $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE client_id = %d", $client_id ), ARRAY_A );
 
         if ( ! $client ) {
@@ -371,7 +473,7 @@ JS;
         }
 
         global $wpdb;
-        $table  = self::get_clients_table_name();
+        $table  = self::get_table_name( self::$clients_table );
         $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE client_id = %d", $client_id ) );
         if ( ! $client ) {
             wp_send_json_error( __( 'Client not found.', 'level-up-client-dashboard' ) );
@@ -427,40 +529,51 @@ JS;
     }
 
     /**
-     * Render the Client Management admin page with tabs.
+     * Render a management page with tabs.
+     *
+     * @param string $title Page title.
+     * @param string $slug  Page slug.
+     * @param array  $tabs  Tab definitions.
      */
-    public static function render_client_management_page() {
+    private static function render_management_page( $title, $slug, $tabs ) {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'level-up-client-dashboard' ) );
         }
 
-        $tabs = array(
-            'add-client'  => __( 'Add a New Client', 'level-up-client-dashboard' ),
-            'edit-client' => __( 'Edit Existing Clients', 'level-up-client-dashboard' ),
-        );
-
-        $current_tab = isset( $_GET['tab'] ) && array_key_exists( $_GET['tab'], $tabs ) ? $_GET['tab'] : 'add-client';
+        $current_tab = isset( $_GET['tab'] ) && isset( $tabs[ $_GET['tab'] ] ) ? $_GET['tab'] : array_key_first( $tabs );
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__( 'Client Management', 'level-up-client-dashboard' ) . '</h1>';
+        echo '<h1>' . esc_html( $title ) . '</h1>';
         echo '<h2 class="nav-tab-wrapper">';
-        foreach ( $tabs as $tab => $label ) {
+        foreach ( $tabs as $tab => $data ) {
             $class = $tab === $current_tab ? ' nav-tab-active' : '';
-            echo '<a class="nav-tab' . esc_attr( $class ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . self::$menu_slug . '&tab=' . $tab ) ) . '">' . esc_html( $label ) . '</a>';
+            echo '<a class="nav-tab' . esc_attr( $class ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . $slug . '&tab=' . $tab ) ) . '">' . esc_html( $data['label'] ) . '</a>';
         }
         echo '</h2>';
 
-        switch ( $current_tab ) {
-            case 'edit-client':
-                self::render_edit_clients_tab();
-                break;
-            case 'add-client':
-            default:
-                self::render_add_client_tab();
-                break;
+        if ( is_callable( $tabs[ $current_tab ]['callback'] ) ) {
+            call_user_func( $tabs[ $current_tab ]['callback'] );
         }
 
         echo '</div>';
+    }
+
+    /**
+     * Render the Client Management admin page with tabs.
+     */
+    public static function render_client_management_page() {
+        $tabs = array(
+            'add-client'  => array(
+                'label'    => __( 'Add a New Client', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_add_client_tab' ),
+            ),
+            'edit-client' => array(
+                'label'    => __( 'Edit Existing Clients', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_edit_clients_tab' ),
+            ),
+        );
+
+        self::render_management_page( __( 'Client Management', 'level-up-client-dashboard' ), self::$menu_slug, $tabs );
     }
 
     /**
@@ -483,7 +596,7 @@ JS;
      */
     private static function render_edit_clients_tab() {
         global $wpdb;
-        $table   = self::get_clients_table_name();
+        $table   = self::get_table_name( self::$clients_table );
         $clients = $wpdb->get_results( "SELECT client_id, company_name, first_name, last_name FROM $table ORDER BY company_name ASC, last_name ASC" );
 
         if ( empty( $clients ) ) {
@@ -502,6 +615,85 @@ JS;
             echo '</div>';
         }
         echo '</div>';
+    }
+
+    /**
+     * Render the Project Management admin page with tabs.
+     */
+    public static function render_project_management_page() {
+        $tabs = array(
+            'add-project'    => array(
+                'label'    => __( 'Add a New Project', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+            'manage-project' => array(
+                'label'    => __( 'Manage Projects', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+        );
+
+        self::render_management_page( __( 'Project Management', 'level-up-client-dashboard' ), self::$project_menu_slug, $tabs );
+    }
+
+    /**
+     * Render the Support Ticket Management admin page with tabs.
+     */
+    public static function render_support_management_page() {
+        $tabs = array(
+            'add-ticket'    => array(
+                'label'    => __( 'Add a New Ticket', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+            'manage-tickets' => array(
+                'label'    => __( 'Manage Tickets', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+        );
+
+        self::render_management_page( __( 'Support Ticket Management', 'level-up-client-dashboard' ), self::$support_menu_slug, $tabs );
+    }
+
+    /**
+     * Render the Billing Management admin page with tabs.
+     */
+    public static function render_billing_management_page() {
+        $tabs = array(
+            'add-billing'    => array(
+                'label'    => __( 'Add Billing Record', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+            'manage-billing' => array(
+                'label'    => __( 'Manage Billing', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+        );
+
+        self::render_management_page( __( 'Billing Management', 'level-up-client-dashboard' ), self::$billing_menu_slug, $tabs );
+    }
+
+    /**
+     * Render the Plugin Management admin page with tabs.
+     */
+    public static function render_plugin_management_page() {
+        $tabs = array(
+            'add-plugin'    => array(
+                'label'    => __( 'Add a New Plugin', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+            'manage-plugins' => array(
+                'label'    => __( 'Manage Plugins', 'level-up-client-dashboard' ),
+                'callback' => array( __CLASS__, 'render_placeholder_tab' ),
+            ),
+        );
+
+        self::render_management_page( __( 'Plugin Management', 'level-up-client-dashboard' ), self::$plugin_menu_slug, $tabs );
+    }
+
+    /**
+     * Placeholder tab content.
+     */
+    private static function render_placeholder_tab() {
+        echo '<p>' . esc_html__( 'Functionality coming soon.', 'level-up-client-dashboard' ) . '</p>';
     }
 }
 
