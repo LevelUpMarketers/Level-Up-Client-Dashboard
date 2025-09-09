@@ -50,7 +50,8 @@ class Level_Up_Client_Dashboard_Admin {
             'getProjectNonce'  => wp_create_nonce( 'lucd_get_project' ),
             'clients'          => $clients,
             'i18n'             => array(
-                'selectClient' => __( 'Please select an existing client.', 'level-up-client-dashboard' ),
+                'selectClient'       => __( 'Please select an existing client.', 'level-up-client-dashboard' ),
+                'confirmDeleteClient' => __( 'Are you sure you want to permanently delete this client?', 'level-up-client-dashboard' ),
             ),
         ) );
     }

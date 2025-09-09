@@ -85,6 +85,40 @@ jQuery(function($){
         });
     });
 
+    $(document).on('click', '.lucd-archive-client', function(e){
+        e.preventDefault();
+        var $form = $(this).closest('form');
+        var clientId = $form.find('input[name="client_id"]').val();
+        var nonce = $form.find('#lucd_archive_nonce').val();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        $.post(ajaxurl, {action: 'lucd_archive_client', client_id: clientId, lucd_archive_nonce: nonce}, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+        });
+    });
+
+    $(document).on('click', '.lucd-delete-client', function(e){
+        e.preventDefault();
+        if(!confirm(lucdAdmin.i18n.confirmDeleteClient)){
+            return;
+        }
+        var $form = $(this).closest('form');
+        var clientId = $form.find('input[name="client_id"]').val();
+        var nonce = $form.find('#lucd_delete_nonce').val();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        $.post(ajaxurl, {action: 'lucd_delete_client', client_id: clientId, lucd_delete_nonce: nonce}, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+            if(response.success){
+                $form.remove();
+            }
+        });
+    });
+
     $('#lucd-add-project-form').on('submit', function(e){
         e.preventDefault();
         var $form = $(this);

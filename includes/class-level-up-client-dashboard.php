@@ -15,11 +15,16 @@ class Level_Up_Client_Dashboard {
      *
      * @var string
      */
-    private static $clients_table  = 'lucd_clients';
-    private static $projects_table = 'lucd_projects';
-    private static $tickets_table  = 'lucd_tickets';
-    private static $billing_table  = 'lucd_billing';
-    private static $plugins_table  = 'lucd_plugins';
+    private static $clients_table         = 'lucd_clients';
+    private static $projects_table        = 'lucd_projects';
+    private static $tickets_table         = 'lucd_tickets';
+    private static $billing_table         = 'lucd_billing';
+    private static $plugins_table         = 'lucd_plugins';
+    private static $clients_archive_table = 'lucd_clients_archive';
+    private static $projects_archive_table = 'lucd_projects_archive';
+    private static $tickets_archive_table  = 'lucd_tickets_archive';
+    private static $billing_archive_table  = 'lucd_billing_archive';
+    private static $plugins_archive_table  = 'lucd_plugins_archive';
 
     /**
      * Initialize the plugin.
@@ -69,6 +74,21 @@ class Level_Up_Client_Dashboard {
     /** Get plugins table base name. */
     public static function plugins_table() { return self::$plugins_table; }
 
+    /** Get archived clients table base name. */
+    public static function clients_archive_table() { return self::$clients_archive_table; }
+
+    /** Get archived projects table base name. */
+    public static function projects_archive_table() { return self::$projects_archive_table; }
+
+    /** Get archived tickets table base name. */
+    public static function tickets_archive_table() { return self::$tickets_archive_table; }
+
+    /** Get archived billing table base name. */
+    public static function billing_archive_table() { return self::$billing_archive_table; }
+
+    /** Get archived plugins table base name. */
+    public static function plugins_archive_table() { return self::$plugins_archive_table; }
+
     /**
      * Plugin activation callback to create required tables.
      */
@@ -77,11 +97,16 @@ class Level_Up_Client_Dashboard {
 
         $charset_collate = $wpdb->get_charset_collate();
 
-        $clients_table  = self::get_table_name( self::$clients_table );
-        $projects_table = self::get_table_name( self::$projects_table );
-        $tickets_table  = self::get_table_name( self::$tickets_table );
-        $billing_table  = self::get_table_name( self::$billing_table );
-        $plugins_table  = self::get_table_name( self::$plugins_table );
+        $clients_table          = self::get_table_name( self::$clients_table );
+        $projects_table         = self::get_table_name( self::$projects_table );
+        $tickets_table          = self::get_table_name( self::$tickets_table );
+        $billing_table          = self::get_table_name( self::$billing_table );
+        $plugins_table          = self::get_table_name( self::$plugins_table );
+        $clients_archive_table  = self::get_table_name( self::$clients_archive_table );
+        $projects_archive_table = self::get_table_name( self::$projects_archive_table );
+        $tickets_archive_table  = self::get_table_name( self::$tickets_archive_table );
+        $billing_archive_table  = self::get_table_name( self::$billing_archive_table );
+        $plugins_archive_table  = self::get_table_name( self::$plugins_archive_table );
 
         $clients_sql = "CREATE TABLE $clients_table (
             client_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -164,11 +189,22 @@ class Level_Up_Client_Dashboard {
             KEY client_id (client_id)
         ) $charset_collate;";
 
+        $clients_archive_sql  = str_replace( $clients_table, $clients_archive_table, $clients_sql );
+        $projects_archive_sql = str_replace( $projects_table, $projects_archive_table, $projects_sql );
+        $tickets_archive_sql  = str_replace( $tickets_table, $tickets_archive_table, $tickets_sql );
+        $billing_archive_sql  = str_replace( $billing_table, $billing_archive_table, $billing_sql );
+        $plugins_archive_sql  = str_replace( $plugins_table, $plugins_archive_table, $plugins_sql );
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $clients_sql );
         dbDelta( $projects_sql );
         dbDelta( $tickets_sql );
         dbDelta( $billing_sql );
         dbDelta( $plugins_sql );
+        dbDelta( $clients_archive_sql );
+        dbDelta( $projects_archive_sql );
+        dbDelta( $tickets_archive_sql );
+        dbDelta( $billing_archive_sql );
+        dbDelta( $plugins_archive_sql );
     }
 }

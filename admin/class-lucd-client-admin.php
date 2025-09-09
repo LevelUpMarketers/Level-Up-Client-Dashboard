@@ -20,6 +20,8 @@ class LUC_Client_Admin {
         add_action( 'wp_ajax_lucd_add_client', array( __CLASS__, 'handle_add_client' ) );
         add_action( 'wp_ajax_lucd_get_client', array( __CLASS__, 'handle_get_client' ) );
         add_action( 'wp_ajax_lucd_update_client', array( __CLASS__, 'handle_update_client' ) );
+        add_action( 'wp_ajax_lucd_archive_client', array( __CLASS__, 'handle_archive_client' ) );
+        add_action( 'wp_ajax_lucd_delete_client', array( __CLASS__, 'handle_delete_client' ) );
     }
 
     /**
@@ -193,7 +195,13 @@ class LUC_Client_Admin {
         echo '<input type="hidden" name="action" value="lucd_update_client" />';
         echo '<input type="hidden" name="client_id" value="' . esc_attr( $client_id ) . '" />';
         wp_nonce_field( 'lucd_update_client', 'lucd_update_nonce' );
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Update Client', 'level-up-client-dashboard' ) . '</button></p>';
+        wp_nonce_field( 'lucd_archive_client', 'lucd_archive_nonce' );
+        wp_nonce_field( 'lucd_delete_client', 'lucd_delete_nonce' );
+        echo '<p>';
+        echo '<button type="submit" class="button button-primary">' . esc_html__( 'Update Client', 'level-up-client-dashboard' ) . '</button> ';
+        echo '<button type="button" class="button lucd-archive-client">' . esc_html__( 'Archive Client', 'level-up-client-dashboard' ) . '</button> ';
+        echo '<button type="button" class="button lucd-delete-client">' . esc_html__( 'Delete Client', 'level-up-client-dashboard' ) . '</button>';
+        echo '</p>';
         echo '</form>';
         echo '<div class="lucd-feedback"><span class="spinner"></span><p></p></div>';
         wp_send_json_success( ob_get_clean() );
@@ -245,6 +253,85 @@ class LUC_Client_Admin {
         }
 
         wp_send_json_success( __( 'Client updated successfully.', 'level-up-client-dashboard' ) );
+    }
+
+    /**
+     * Handle AJAX request to archive a client.
+     */
+    public static function handle_archive_client() {
+        check_ajax_referer( 'lucd_archive_client', 'lucd_archive_nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
+        }
+
+        $client_id = isset( $_POST['client_id'] ) ? absint( $_POST['client_id'] ) : 0;
+        if ( ! $client_id ) {
+            wp_send_json_error( __( 'Invalid client ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+
+        $tables = array(
+            Level_Up_Client_Dashboard::clients_table()  => Level_Up_Client_Dashboard::clients_archive_table(),
+            Level_Up_Client_Dashboard::projects_table() => Level_Up_Client_Dashboard::projects_archive_table(),
+            Level_Up_Client_Dashboard::tickets_table()  => Level_Up_Client_Dashboard::tickets_archive_table(),
+            Level_Up_Client_Dashboard::billing_table()  => Level_Up_Client_Dashboard::billing_archive_table(),
+            Level_Up_Client_Dashboard::plugins_table()  => Level_Up_Client_Dashboard::plugins_archive_table(),
+        );
+
+        foreach ( $tables as $active_base => $archive_base ) {
+            $active  = Level_Up_Client_Dashboard::get_table_name( $active_base );
+            $archive = Level_Up_Client_Dashboard::get_table_name( $archive_base );
+            $wpdb->query( $wpdb->prepare( "INSERT INTO $archive SELECT * FROM $active WHERE client_id = %d", $client_id ) );
+            $wpdb->delete( $active, array( 'client_id' => $client_id ), array( '%d' ) );
+        }
+
+        // TODO: Update to handle additional custom tables that reference client_id.
+        wp_send_json_success( __( 'Client archived successfully.', 'level-up-client-dashboard' ) );
+    }
+
+    /**
+     * Handle AJAX request to delete a client.
+     */
+    public static function handle_delete_client() {
+        check_ajax_referer( 'lucd_delete_client', 'lucd_delete_nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
+        }
+
+        $client_id = isset( $_POST['client_id'] ) ? absint( $_POST['client_id'] ) : 0;
+        if ( ! $client_id ) {
+            wp_send_json_error( __( 'Invalid client ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+
+        $clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+        $user_id       = (int) $wpdb->get_var( $wpdb->prepare( "SELECT wp_user_id FROM $clients_table WHERE client_id = %d", $client_id ) );
+
+        $tables = array(
+            Level_Up_Client_Dashboard::clients_table()  => Level_Up_Client_Dashboard::clients_archive_table(),
+            Level_Up_Client_Dashboard::projects_table() => Level_Up_Client_Dashboard::projects_archive_table(),
+            Level_Up_Client_Dashboard::tickets_table()  => Level_Up_Client_Dashboard::tickets_archive_table(),
+            Level_Up_Client_Dashboard::billing_table()  => Level_Up_Client_Dashboard::billing_archive_table(),
+            Level_Up_Client_Dashboard::plugins_table()  => Level_Up_Client_Dashboard::plugins_archive_table(),
+        );
+
+        foreach ( $tables as $active_base => $archive_base ) {
+            $active  = Level_Up_Client_Dashboard::get_table_name( $active_base );
+            $archive = Level_Up_Client_Dashboard::get_table_name( $archive_base );
+            $wpdb->delete( $active, array( 'client_id' => $client_id ), array( '%d' ) );
+            $wpdb->delete( $archive, array( 'client_id' => $client_id ), array( '%d' ) );
+        }
+
+        if ( $user_id ) {
+            wp_delete_user( $user_id );
+        }
+
+        // TODO: Update to handle additional custom tables that reference client_id.
+        wp_send_json_success( __( 'Client deleted successfully.', 'level-up-client-dashboard' ) );
     }
 
     /**

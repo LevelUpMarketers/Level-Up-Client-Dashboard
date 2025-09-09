@@ -88,3 +88,15 @@ Lists plugins associated with a client.
 | `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
 | `plugin_name` | varchar(255) | Placeholder plugin name. |
 | `created_at` | datetime | Record creation timestamp. |
+
+## Archive Tables
+
+Every primary table listed above has a corresponding archive table that mirrors its structure:
+
+- `lucd_clients_archive`
+- `lucd_projects_archive`
+- `lucd_tickets_archive`
+- `lucd_billing_archive`
+- `lucd_plugins_archive`
+
+Archived records are moved from the primary tables into these archive tables when a client is archived. Future custom tables should also include matching archive tables so client data can be preserved when archived.
