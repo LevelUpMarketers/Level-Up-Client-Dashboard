@@ -88,8 +88,20 @@ class LUC_Project_Admin {
         foreach ( self::get_project_fields() as $field => $data ) {
             $value = isset( $project[ $field ] ) ? $project[ $field ] : '';
             $class = isset( $data['class'] ) ? ' ' . $data['class'] : '';
+
+            if ( 'hidden' === $data['type'] ) {
+                printf(
+                    '<input type="hidden" id="%1$s" name="%1$s" value="%2$s" class="lucd-project-client-id" />',
+                    esc_attr( $field ),
+                    esc_attr( $value )
+                );
+                continue;
+            }
+
             echo '<div class="lucd-field">';
-            echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
+            if ( isset( $data['label'] ) ) {
+                echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
+            }
             if ( 'textarea' === $data['type'] ) {
                 printf( '<textarea id="%1$s" name="%1$s"%3$s>%2$s</textarea>', esc_attr( $field ), esc_textarea( $value ), $class ? ' class="' . esc_attr( trim( $class ) ) . '"' : '' );
             } else {
@@ -97,10 +109,7 @@ class LUC_Project_Admin {
                 if ( isset( $data['step'] ) ) {
                     $extra .= ' step="' . esc_attr( $data['step'] ) . '"';
                 }
-                if ( 'hidden' === $data['type'] ) {
-                    $class = ' class="lucd-project-client-id"';
-                }
-                printf( '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s"%4$s%5$s />', esc_attr( $data['type'] ), esc_attr( $field ), esc_attr( $value ), $class, $extra );
+                printf( '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s"%4$s%5$s />', esc_attr( $data['type'] ), esc_attr( $field ), esc_attr( $value ), $class ? ' class="' . esc_attr( trim( $class ) ) . '"' : '', $extra );
             }
             echo '</div>';
         }
