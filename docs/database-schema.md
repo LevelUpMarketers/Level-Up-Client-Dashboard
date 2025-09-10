@@ -60,14 +60,21 @@ Tracks projects associated with a client.
 | `updated_at` | datetime | Record last updated timestamp. |
 
 ## `lucd_tickets`
-Stores support ticket metadata for clients.
+Stores support ticket records associated with a client.
 
 | Column | Type | Description |
 | --- | --- | --- |
 | `ticket_id` | bigint(20) unsigned | Primary key. |
 | `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
-| `subject` | varchar(255) | Placeholder ticket subject. |
+| `creation_datetime` | datetime | When the ticket was created. |
+| `start_time` | datetime | Work start date and time. |
+| `end_time` | datetime | Work end date and time. |
+| `duration_minutes` | int unsigned | Total duration in minutes. |
+| `status` | varchar(50) | Current ticket status. |
+| `initial_description` | text | Initial ticket description. |
+| `ticket_updates` | longtext | Ongoing ticket updates. |
 | `created_at` | datetime | Record creation timestamp. |
+| `updated_at` | datetime | Record last updated timestamp. |
 
 ## `lucd_billing`
 Captures basic billing records.

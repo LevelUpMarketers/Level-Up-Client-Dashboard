@@ -48,6 +48,8 @@ class Level_Up_Client_Dashboard_Admin {
             'getClientNonce'   => wp_create_nonce( 'lucd_get_client' ),
             'getProjectsNonce' => wp_create_nonce( 'lucd_get_projects' ),
             'getProjectNonce'  => wp_create_nonce( 'lucd_get_project' ),
+            'getTicketsNonce'  => wp_create_nonce( 'lucd_get_tickets' ),
+            'getTicketNonce'   => wp_create_nonce( 'lucd_get_ticket' ),
             'clients'          => $clients,
             'i18n'             => array(
                 'selectClient'       => __( 'Please select an existing client.', 'level-up-client-dashboard' ),

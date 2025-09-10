@@ -165,8 +165,15 @@ class Level_Up_Client_Dashboard {
         $tickets_sql = "CREATE TABLE $tickets_table (
             ticket_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             client_id bigint(20) unsigned NOT NULL,
-            subject varchar(255) NOT NULL,
+            creation_datetime datetime NOT NULL,
+            start_time datetime DEFAULT NULL,
+            end_time datetime DEFAULT NULL,
+            duration_minutes int(11) unsigned NOT NULL DEFAULT 0,
+            status varchar(50) NOT NULL DEFAULT 'Not Started',
+            initial_description text NOT NULL,
+            ticket_updates longtext DEFAULT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (ticket_id),
             KEY client_id (client_id)
         ) $charset_collate;";

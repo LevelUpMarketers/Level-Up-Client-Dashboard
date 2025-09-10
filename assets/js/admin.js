@@ -24,22 +24,24 @@ jQuery(function($){
     }
 
     function setupClientAutocomplete($context){
-        var $input = $context.find('.lucd-project-client');
-        if(!$input.length){ return; }
-        var $hidden = $context.find('.lucd-project-client-id');
-        $input.autocomplete({
-            source: clientLabels,
-            select: function(event, ui){
-                $hidden.val(clientMap[ui.item.value]);
-            },
-            change: function(event, ui){
-                if(!ui.item){
-                    $hidden.val('');
-                    $(this).val('');
+        $context.find('.lucd-project-client, .lucd-ticket-client').each(function(){
+            var $input = $(this);
+            var $form = $input.closest('form');
+            var $hidden = $input.hasClass('lucd-project-client') ? $form.find('.lucd-project-client-id') : $form.find('.lucd-ticket-client-id');
+            $input.autocomplete({
+                source: clientLabels,
+                select: function(event, ui){
+                    $hidden.val(clientMap[ui.item.value]);
+                },
+                change: function(event, ui){
+                    if(!ui.item){
+                        $hidden.val('');
+                        $(this).val('');
+                    }
                 }
-            }
-        }).on('input', function(){
-            $hidden.val('');
+            }).on('input', function(){
+                $hidden.val('');
+            });
         });
     }
 
@@ -61,6 +63,9 @@ jQuery(function($){
         }
         if($header.data('project-id')){
             data.project_id = $header.data('project-id');
+        }
+        if($header.data('ticket-id')){
+            data.ticket_id = $header.data('ticket-id');
         }
         $.post(ajaxurl, data, function(response){
             if(response.success){
@@ -141,6 +146,28 @@ jQuery(function($){
         });
     });
 
+    $('#lucd-add-ticket-form').on('submit', function(e){
+        e.preventDefault();
+        var $form = $(this);
+        var $feedback = $('#lucd-ticket-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        var label = $form.find('.lucd-ticket-client').val();
+        var clientId = $form.find('.lucd-ticket-client-id').val();
+        if(!clientId || !clientMap[label] || clientMap[label] != clientId){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(lucdAdmin.i18n.selectClient);
+            return;
+        }
+        $.post(ajaxurl, $form.serialize(), function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+            if(response.success){
+                $form[0].reset();
+            }
+        });
+    });
+
     $(document).on('submit', '.lucd-edit-project-form', function(e){
         e.preventDefault();
         var $form = $(this);
@@ -161,5 +188,41 @@ jQuery(function($){
         });
     });
 
+    $(document).on('submit', '.lucd-edit-ticket-form', function(e){
+        e.preventDefault();
+        var $form = $(this);
+        var data = $form.serialize();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        var label = $form.find('.lucd-ticket-client').val();
+        var clientId = $form.find('.lucd-ticket-client-id').val();
+        if(!clientId || !clientMap[label] || clientMap[label] != clientId){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(lucdAdmin.i18n.selectClient);
+            return;
+        }
+        $.post(ajaxurl, data, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+        });
+    });
+
+    function updateTicketDuration($form){
+        var start = $form.find('.lucd-ticket-start').val();
+        var end = $form.find('.lucd-ticket-end').val();
+        if(start && end){
+            var diff = (new Date(end) - new Date(start)) / 60000;
+            if(diff >= 0){
+                $form.find('.lucd-ticket-duration').val(Math.round(diff));
+            }
+        }
+    }
+
+    $(document).on('blur', '.lucd-ticket-start, .lucd-ticket-end', function(){
+        updateTicketDuration($(this).closest('form'));
+    });
+
     setupClientAutocomplete($('#lucd-add-project-form'));
+    setupClientAutocomplete($('#lucd-add-ticket-form'));
 });
