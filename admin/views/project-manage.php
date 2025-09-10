@@ -1,6 +1,6 @@
 <?php
 /**
- * View: Manage Projects.
+ * View: Manage Projects & Services.
  *
  * @package Level_Up_Client_Dashboard
  */

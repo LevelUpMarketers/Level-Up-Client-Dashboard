@@ -46,14 +46,17 @@ Tracks projects associated with a client.
 | `project_id` | bigint(20) unsigned | Primary key. |
 | `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
 | `project_name` | varchar(255) | Name of the project. |
+| `project_type` | varchar(100) | Type or category of project. |
 | `start_date` | date | Date the project work began. |
 | `end_date` | date | Date the project was completed. |
 | `status` | varchar(100) | Current project status. |
 | `dev_link` | varchar(255) | URL to the development environment. |
 | `live_link` | varchar(255) | URL to the live site. |
 | `gdrive_link` | varchar(255) | Google Drive folder URL. |
-| `project_type` | varchar(100) | Type or category of project. |
-| `total_cost` | decimal(10,2) | Total project cost. |
+| `total_one_time_cost` | decimal(10,2) | Total one-time project cost. |
+| `mrr` | decimal(10,2) | Monthly recurring revenue. |
+| `arr` | decimal(10,2) | Annual recurring revenue. |
+| `monthly_support_time` | int unsigned | Monthly support time in minutes. |
 | `description` | text | Detailed project description. |
 | `project_updates` | longtext | Historical log of project updates. |
 | `created_at` | datetime | Record creation timestamp. |

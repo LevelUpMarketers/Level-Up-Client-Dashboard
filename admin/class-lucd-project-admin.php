@@ -1,6 +1,6 @@
 <?php
 /**
- * Project management admin functionality.
+ * Project and services management admin functionality.
  *
  * @package Level_Up_Client_Dashboard
  */
@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class LUC_Project_Admin {
-    const MENU_SLUG = 'lucd-project-management';
+    const MENU_SLUG = 'lucd-project-services-management';
 
     /**
      * Register hooks.
@@ -26,12 +26,12 @@ class LUC_Project_Admin {
     }
 
     /**
-     * Register the Project Management admin menu.
+     * Register the Project & Services Management admin menu.
      */
     public static function register_menu() {
         add_menu_page(
-            __( 'Project Management', 'level-up-client-dashboard' ),
-            __( 'Project Management', 'level-up-client-dashboard' ),
+            __( 'Project & Services Management', 'level-up-client-dashboard' ),
+            __( 'Project & Services Management', 'level-up-client-dashboard' ),
             'manage_options',
             self::MENU_SLUG,
             array( __CLASS__, 'render_page' ),
@@ -41,21 +41,21 @@ class LUC_Project_Admin {
     }
 
     /**
-     * Render the Project Management admin page.
+     * Render the Project & Services Management admin page.
      */
     public static function render_page() {
         $tabs = array(
             'add-project'    => array(
-                'label'    => __( 'Add a New Project', 'level-up-client-dashboard' ),
+                'label'    => __( 'Add a New Project or Service', 'level-up-client-dashboard' ),
                 'callback' => array( __CLASS__, 'render_add_project_tab' ),
             ),
             'manage-project' => array(
-                'label'    => __( 'Manage Projects', 'level-up-client-dashboard' ),
+                'label'    => __( 'Manage Projects & Services', 'level-up-client-dashboard' ),
                 'callback' => array( __CLASS__, 'render_manage_projects_tab' ),
             ),
         );
 
-        Level_Up_Client_Dashboard_Admin::render_management_page( __( 'Project Management', 'level-up-client-dashboard' ), self::MENU_SLUG, $tabs );
+        Level_Up_Client_Dashboard_Admin::render_management_page( __( 'Project & Services Management', 'level-up-client-dashboard' ), self::MENU_SLUG, $tabs );
     }
 
     /**
@@ -65,20 +65,61 @@ class LUC_Project_Admin {
      */
     private static function get_project_fields() {
         return array(
-            'project_name'  => array( 'label' => __( 'Project Name', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'project_client'=> array( 'label' => __( 'Client', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-project-client' ),
-            'client_id'     => array( 'type' => 'hidden' ),
-            'start_date'    => array( 'label' => __( 'Start Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
-            'end_date'      => array( 'label' => __( 'End Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
-            'status'        => array( 'label' => __( 'Status', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'dev_link'      => array( 'label' => __( 'Dev Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'live_link'     => array( 'label' => __( 'Live Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'gdrive_link'   => array( 'label' => __( 'Google Drive Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'project_type'  => array( 'label' => __( 'Project Type', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'total_cost'    => array( 'label' => __( 'Total Cost', 'level-up-client-dashboard' ), 'type' => 'number', 'step' => '0.01' ),
-            'description'   => array( 'label' => __( 'Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
-            'project_updates'=> array( 'label' => __( 'Project Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'project_name'         => array( 'label' => __( 'Project Name', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'project_client'       => array( 'label' => __( 'Client', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-project-client' ),
+            'client_id'            => array( 'type' => 'hidden' ),
+            'project_type'         => array(
+                'label'    => __( 'Project Type', 'level-up-client-dashboard' ),
+                'type'     => 'text',
+                'datalist' => array(
+                    __( 'Website Design & Development', 'level-up-client-dashboard' ),
+                    __( 'Website Hosting', 'level-up-client-dashboard' ),
+                    __( 'Domain Management', 'level-up-client-dashboard' ),
+                    __( 'Logo', 'level-up-client-dashboard' ),
+                    __( 'Misc. Graphic Design', 'level-up-client-dashboard' ),
+                    __( 'PPC', 'level-up-client-dashboard' ),
+                    __( 'SEO', 'level-up-client-dashboard' ),
+                    __( 'Social Media Management', 'level-up-client-dashboard' ),
+                    __( 'Social Media Advertising', 'level-up-client-dashboard' ),
+                    __( 'Custom Development', 'level-up-client-dashboard' ),
+                ),
+            ),
+            'start_date'           => array( 'label' => __( 'Start Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
+            'end_date'             => array( 'label' => __( 'End Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
+            'status'               => array(
+                'label'          => __( 'Status', 'level-up-client-dashboard' ),
+                'type'           => 'textarea',
+                'select_options' => array(
+                    __( 'Not Started', 'level-up-client-dashboard' ),
+                    __( 'In Progress', 'level-up-client-dashboard' ),
+                    __( 'Completed', 'level-up-client-dashboard' ),
+                    __( 'Client Feedback Needed', 'level-up-client-dashboard' ),
+                    __( 'Client Assets Needed', 'level-up-client-dashboard' ),
+                    __( 'Cancelled', 'level-up-client-dashboard' ),
+                ),
+            ),
+            'dev_link'             => array( 'label' => __( 'Dev Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
+            'live_link'            => array( 'label' => __( 'Live Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
+            'gdrive_link'          => array( 'label' => __( 'Google Drive Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
+            'total_one_time_cost'  => array( 'label' => __( 'Total One-Time Cost', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
+            'mrr'                  => array( 'label' => __( 'MRR', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
+            'arr'                  => array( 'label' => __( 'ARR', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
+            'monthly_support_time' => array( 'label' => __( 'Monthly Support Time', 'level-up-client-dashboard' ), 'type' => 'number', 'step' => '1' ),
+            'description'          => array( 'label' => __( 'Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'project_updates'      => array( 'label' => __( 'Project Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
         );
+    }
+
+    /**
+     * Sanitize currency input.
+     *
+     * @param string $value Raw input.
+     * @return float
+     */
+    private static function sanitize_currency( $value ) {
+        $value = sanitize_text_field( $value );
+        $value = str_replace( array( '$', ',' ), '', $value );
+        return '' === $value ? 0 : (float) $value;
     }
 
     /**
@@ -104,6 +145,15 @@ class LUC_Project_Admin {
             if ( isset( $data['label'] ) ) {
                 echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
             }
+            if ( isset( $data['select_options'] ) ) {
+                echo '<select class="lucd-status-select">';
+                foreach ( $data['select_options'] as $option ) {
+                    $selected = $option === $value ? ' selected="selected"' : '';
+                    echo '<option value="' . esc_attr( $option ) . '"' . $selected . '>' . esc_html( $option ) . '</option>';
+                }
+                echo '</select>';
+            }
+
             if ( 'textarea' === $data['type'] ) {
                 printf( '<textarea id="%1$s" name="%1$s"%3$s>%2$s</textarea>', esc_attr( $field ), esc_textarea( $value ), $class ? ' class="' . esc_attr( trim( $class ) ) . '"' : '' );
             } else {
@@ -111,7 +161,19 @@ class LUC_Project_Admin {
                 if ( isset( $data['step'] ) ) {
                     $extra .= ' step="' . esc_attr( $data['step'] ) . '"';
                 }
-                printf( '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s"%4$s%5$s />', esc_attr( $data['type'] ), esc_attr( $field ), esc_attr( $value ), $class ? ' class="' . esc_attr( trim( $class ) ) . '"' : '', $extra );
+                $list = '';
+                if ( isset( $data['datalist'] ) ) {
+                    $list_id = $field . '_list';
+                    $list    = ' list="' . esc_attr( $list_id ) . '"';
+                }
+                printf( '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s"%4$s%5$s%6$s />', esc_attr( $data['type'] ), esc_attr( $field ), esc_attr( $value ), $class ? ' class="' . esc_attr( trim( $class ) ) . '"' : '', $extra, $list );
+                if ( isset( $data['datalist'] ) ) {
+                    echo '<datalist id="' . esc_attr( $list_id ) . '">';
+                    foreach ( $data['datalist'] as $option ) {
+                        echo '<option value="' . esc_attr( $option ) . '"></option>';
+                    }
+                    echo '</datalist>';
+                }
             }
             echo '</div>';
         }
@@ -133,7 +195,16 @@ class LUC_Project_Admin {
             if ( 'project_client' === $field ) {
                 continue;
             }
-            $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            $raw = isset( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '';
+            if ( in_array( $field, array( 'total_one_time_cost', 'mrr', 'arr' ), true ) ) {
+                $data[ $field ] = self::sanitize_currency( $raw );
+            } elseif ( 'monthly_support_time' === $field ) {
+                $data[ $field ] = absint( $raw );
+            } elseif ( 'textarea' === $info['type'] ) {
+                $data[ $field ] = sanitize_textarea_field( $raw );
+            } else {
+                $data[ $field ] = sanitize_text_field( $raw );
+            }
         }
 
         if ( empty( $data['client_id'] ) ) {
@@ -249,7 +320,16 @@ class LUC_Project_Admin {
             if ( 'project_client' === $field ) {
                 continue;
             }
-            $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            $raw = isset( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '';
+            if ( in_array( $field, array( 'total_one_time_cost', 'mrr', 'arr' ), true ) ) {
+                $data[ $field ] = self::sanitize_currency( $raw );
+            } elseif ( 'monthly_support_time' === $field ) {
+                $data[ $field ] = absint( $raw );
+            } elseif ( 'textarea' === $info['type'] ) {
+                $data[ $field ] = sanitize_textarea_field( $raw );
+            } else {
+                $data[ $field ] = sanitize_text_field( $raw );
+            }
         }
 
         if ( empty( $data['client_id'] ) ) {

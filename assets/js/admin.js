@@ -45,6 +45,28 @@ jQuery(function($){
         });
     }
 
+    function formatCurrencyInput($input){
+        var val = $input.val().replace(/[^0-9.]/g, '');
+        if(val){
+            var num = parseFloat(val);
+            $input.val(num.toLocaleString('en-US', {style: 'currency', currency: 'USD'}));
+        } else {
+            $input.val('');
+        }
+    }
+
+    function formatCurrencyFields($context){
+        $context.find('.lucd-currency').each(function(){
+            formatCurrencyInput($(this));
+        });
+    }
+
+    function initStatusFields($context){
+        $context.find('.lucd-status-select').each(function(){
+            $(this).trigger('change');
+        });
+    }
+
     $(document).on('click', '.lucd-accordion-header', function(){
         var $header = $(this);
         var $content = $header.next('.lucd-accordion-content');
@@ -71,6 +93,8 @@ jQuery(function($){
             if(response.success){
                 $content.html(response.data).data('loaded', true);
                 setupClientAutocomplete($content);
+                formatCurrencyFields($content);
+                initStatusFields($content);
             } else {
                 $content.html('<p>'+response.data+'</p>');
             }
@@ -276,6 +300,15 @@ jQuery(function($){
         });
     });
 
+    $(document).on('blur', '.lucd-currency', function(){
+        formatCurrencyInput($(this));
+    });
+
+    $(document).on('change', '.lucd-status-select', function(){
+        var val = $(this).val();
+        $(this).closest('.lucd-field').find('textarea').val(val);
+    });
+
     function updateTicketDuration($form){
         var start = $form.find('.lucd-ticket-start').val();
         var end = $form.find('.lucd-ticket-end').val();
@@ -293,4 +326,6 @@ jQuery(function($){
 
     setupClientAutocomplete($('#lucd-add-project-form'));
     setupClientAutocomplete($('#lucd-add-ticket-form'));
+    formatCurrencyFields($('#lucd-add-project-form'));
+    initStatusFields($('#lucd-add-project-form'));
 });
