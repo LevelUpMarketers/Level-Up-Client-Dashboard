@@ -46,28 +46,38 @@ Tracks projects associated with a client.
 | `project_id` | bigint(20) unsigned | Primary key. |
 | `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
 | `project_name` | varchar(255) | Name of the project. |
+| `project_type` | varchar(100) | Type or category of project. |
 | `start_date` | date | Date the project work began. |
 | `end_date` | date | Date the project was completed. |
 | `status` | varchar(100) | Current project status. |
 | `dev_link` | varchar(255) | URL to the development environment. |
 | `live_link` | varchar(255) | URL to the live site. |
 | `gdrive_link` | varchar(255) | Google Drive folder URL. |
-| `project_type` | varchar(100) | Type or category of project. |
-| `total_cost` | decimal(10,2) | Total project cost. |
+| `total_one_time_cost` | decimal(10,2) | Total one-time project cost. |
+| `mrr` | decimal(10,2) | Monthly recurring revenue. |
+| `arr` | decimal(10,2) | Annual recurring revenue. |
+| `monthly_support_time` | int unsigned | Monthly support time in minutes. |
 | `description` | text | Detailed project description. |
 | `project_updates` | longtext | Historical log of project updates. |
 | `created_at` | datetime | Record creation timestamp. |
 | `updated_at` | datetime | Record last updated timestamp. |
 
 ## `lucd_tickets`
-Stores support ticket metadata for clients.
+Stores support ticket records associated with a client.
 
 | Column | Type | Description |
 | --- | --- | --- |
 | `ticket_id` | bigint(20) unsigned | Primary key. |
 | `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
-| `subject` | varchar(255) | Placeholder ticket subject. |
+| `creation_datetime` | datetime | When the ticket was created. |
+| `start_time` | datetime | Work start date and time. |
+| `end_time` | datetime | Work end date and time. |
+| `duration_minutes` | int unsigned | Total duration in minutes. |
+| `status` | varchar(50) | Current ticket status. |
+| `initial_description` | text | Initial ticket description. |
+| `ticket_updates` | longtext | Ongoing ticket updates. |
 | `created_at` | datetime | Record creation timestamp. |
+| `updated_at` | datetime | Record last updated timestamp. |
 
 ## `lucd_billing`
 Captures basic billing records.
@@ -88,3 +98,15 @@ Lists plugins associated with a client.
 | `client_id` | bigint(20) unsigned | References `lucd_clients.client_id`. |
 | `plugin_name` | varchar(255) | Placeholder plugin name. |
 | `created_at` | datetime | Record creation timestamp. |
+
+## Archive Tables
+
+Every primary table listed above has a corresponding archive table that mirrors its structure:
+
+- `lucd_clients_archive`
+- `lucd_projects_archive`
+- `lucd_tickets_archive`
+- `lucd_billing_archive`
+- `lucd_plugins_archive`
+
+Archived records are moved from the primary tables into these archive tables when a client is archived. Future custom tables should also include matching archive tables so client data can be preserved when archived.
