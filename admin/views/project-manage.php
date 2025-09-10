@@ -6,8 +6,9 @@
  */
 
 global $wpdb;
-$clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-$clients = $wpdb->get_results( "SELECT client_id, company_name, first_name, last_name FROM $clients_table ORDER BY company_name ASC, last_name ASC" );
+$clients_table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+$projects_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_table() );
+$clients = $wpdb->get_results( "SELECT DISTINCT c.client_id, c.company_name, c.first_name, c.last_name FROM $clients_table c INNER JOIN $projects_table p ON c.client_id = p.client_id ORDER BY c.company_name ASC, c.last_name ASC" );
 
 if ( empty( $clients ) ) {
     echo '<p>' . esc_html__( 'No clients found.', 'level-up-client-dashboard' ) . '</p>';

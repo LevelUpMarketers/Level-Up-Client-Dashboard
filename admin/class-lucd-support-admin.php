@@ -21,6 +21,8 @@ class LUC_Support_Admin {
         add_action( 'wp_ajax_lucd_get_tickets', array( __CLASS__, 'handle_get_tickets' ) );
         add_action( 'wp_ajax_lucd_get_ticket', array( __CLASS__, 'handle_get_ticket' ) );
         add_action( 'wp_ajax_lucd_update_ticket', array( __CLASS__, 'handle_update_ticket' ) );
+        add_action( 'wp_ajax_lucd_archive_ticket', array( __CLASS__, 'handle_archive_ticket' ) );
+        add_action( 'wp_ajax_lucd_delete_ticket', array( __CLASS__, 'handle_delete_ticket' ) );
     }
 
     /**
@@ -254,11 +256,17 @@ class LUC_Support_Admin {
 
         ob_start();
         echo '<form class="lucd-edit-ticket-form">';
-        self::render_ticket_fields( $ticket );
-        echo '<input type="hidden" name="action" value="lucd_update_ticket" />';
-        echo '<input type="hidden" name="ticket_id" value="' . esc_attr( $ticket_id ) . '" />';
+       self::render_ticket_fields( $ticket );
+       echo '<input type="hidden" name="action" value="lucd_update_ticket" />';
+       echo '<input type="hidden" name="ticket_id" value="' . esc_attr( $ticket_id ) . '" />';
         wp_nonce_field( 'lucd_update_ticket', 'lucd_update_ticket_nonce' );
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Update Ticket', 'level-up-client-dashboard' ) . '</button></p>';
+        wp_nonce_field( 'lucd_archive_ticket', 'lucd_archive_ticket_nonce' );
+        wp_nonce_field( 'lucd_delete_ticket', 'lucd_delete_ticket_nonce' );
+        echo '<p>';
+        echo '<button type="submit" class="button button-primary">' . esc_html__( 'Update Ticket', 'level-up-client-dashboard' ) . '</button> ';
+        echo '<button type="button" class="button lucd-archive-ticket">' . esc_html__( 'Archive Ticket', 'level-up-client-dashboard' ) . '</button> ';
+        echo '<button type="button" class="button lucd-delete-ticket">' . esc_html__( 'Delete Ticket', 'level-up-client-dashboard' ) . '</button>';
+        echo '</p>';
         echo '</form>';
         echo '<div class="lucd-feedback"><span class="spinner"></span><p></p></div>';
         wp_send_json_success( ob_get_clean() );
@@ -312,5 +320,55 @@ class LUC_Support_Admin {
         }
 
         wp_send_json_success( __( 'Ticket updated successfully.', 'level-up-client-dashboard' ) );
+    }
+
+    /**
+     * Handle AJAX request to archive a ticket.
+     */
+    public static function handle_archive_ticket() {
+        check_ajax_referer( 'lucd_archive_ticket', 'lucd_archive_ticket_nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
+        }
+
+        $ticket_id = isset( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+        if ( ! $ticket_id ) {
+            wp_send_json_error( __( 'Invalid ticket ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+        $active  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
+        $archive = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_archive_table() );
+        $wpdb->query( $wpdb->prepare( "INSERT INTO $archive SELECT * FROM $active WHERE ticket_id = %d", $ticket_id ) );
+        $wpdb->delete( $active, array( 'ticket_id' => $ticket_id ), array( '%d' ) );
+
+        // TODO: Update to handle additional custom tables that reference ticket_id.
+        wp_send_json_success( __( 'Ticket archived successfully.', 'level-up-client-dashboard' ) );
+    }
+
+    /**
+     * Handle AJAX request to delete a ticket.
+     */
+    public static function handle_delete_ticket() {
+        check_ajax_referer( 'lucd_delete_ticket', 'lucd_delete_ticket_nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
+        }
+
+        $ticket_id = isset( $_POST['ticket_id'] ) ? absint( $_POST['ticket_id'] ) : 0;
+        if ( ! $ticket_id ) {
+            wp_send_json_error( __( 'Invalid ticket ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+        $active  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
+        $archive = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_archive_table() );
+        $wpdb->delete( $active, array( 'ticket_id' => $ticket_id ), array( '%d' ) );
+        $wpdb->delete( $archive, array( 'ticket_id' => $ticket_id ), array( '%d' ) );
+
+        // TODO: Update to handle additional custom tables that reference ticket_id.
+        wp_send_json_success( __( 'Ticket deleted successfully.', 'level-up-client-dashboard' ) );
     }
 }

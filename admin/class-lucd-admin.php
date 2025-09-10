@@ -54,6 +54,8 @@ class Level_Up_Client_Dashboard_Admin {
             'i18n'             => array(
                 'selectClient'       => __( 'Please select an existing client.', 'level-up-client-dashboard' ),
                 'confirmDeleteClient' => __( 'Are you sure you want to permanently delete this client?', 'level-up-client-dashboard' ),
+                'confirmDeleteProject' => __( 'Are you sure you want to permanently delete this project?', 'level-up-client-dashboard' ),
+                'confirmDeleteTicket'  => __( 'Are you sure you want to permanently delete this ticket?', 'level-up-client-dashboard' ),
             ),
         ) );
     }

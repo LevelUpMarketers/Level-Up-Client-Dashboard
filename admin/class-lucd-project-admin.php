@@ -21,6 +21,8 @@ class LUC_Project_Admin {
         add_action( 'wp_ajax_lucd_get_projects', array( __CLASS__, 'handle_get_projects' ) );
         add_action( 'wp_ajax_lucd_get_project', array( __CLASS__, 'handle_get_project' ) );
         add_action( 'wp_ajax_lucd_update_project', array( __CLASS__, 'handle_update_project' ) );
+        add_action( 'wp_ajax_lucd_archive_project', array( __CLASS__, 'handle_archive_project' ) );
+        add_action( 'wp_ajax_lucd_delete_project', array( __CLASS__, 'handle_delete_project' ) );
     }
 
     /**
@@ -214,7 +216,13 @@ class LUC_Project_Admin {
         echo '<input type="hidden" name="action" value="lucd_update_project" />';
         echo '<input type="hidden" name="project_id" value="' . esc_attr( $project_id ) . '" />';
         wp_nonce_field( 'lucd_update_project', 'lucd_update_project_nonce' );
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Update Project', 'level-up-client-dashboard' ) . '</button></p>';
+        wp_nonce_field( 'lucd_archive_project', 'lucd_archive_project_nonce' );
+        wp_nonce_field( 'lucd_delete_project', 'lucd_delete_project_nonce' );
+        echo '<p>';
+        echo '<button type="submit" class="button button-primary">' . esc_html__( 'Update Project', 'level-up-client-dashboard' ) . '</button> ';
+        echo '<button type="button" class="button lucd-archive-project">' . esc_html__( 'Archive Project', 'level-up-client-dashboard' ) . '</button> ';
+        echo '<button type="button" class="button lucd-delete-project">' . esc_html__( 'Delete Project', 'level-up-client-dashboard' ) . '</button>';
+        echo '</p>';
         echo '</form>';
         echo '<div class="lucd-feedback"><span class="spinner"></span><p></p></div>';
         wp_send_json_success( ob_get_clean() );
@@ -258,6 +266,56 @@ class LUC_Project_Admin {
         }
 
         wp_send_json_success( __( 'Project updated successfully.', 'level-up-client-dashboard' ) );
+    }
+
+    /**
+     * Handle AJAX request to archive a project.
+     */
+    public static function handle_archive_project() {
+        check_ajax_referer( 'lucd_archive_project', 'lucd_archive_project_nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
+        }
+
+        $project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+        if ( ! $project_id ) {
+            wp_send_json_error( __( 'Invalid project ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+        $active  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_table() );
+        $archive = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_archive_table() );
+        $wpdb->query( $wpdb->prepare( "INSERT INTO $archive SELECT * FROM $active WHERE project_id = %d", $project_id ) );
+        $wpdb->delete( $active, array( 'project_id' => $project_id ), array( '%d' ) );
+
+        // TODO: Update to handle additional custom tables that reference project_id.
+        wp_send_json_success( __( 'Project archived successfully.', 'level-up-client-dashboard' ) );
+    }
+
+    /**
+     * Handle AJAX request to delete a project.
+     */
+    public static function handle_delete_project() {
+        check_ajax_referer( 'lucd_delete_project', 'lucd_delete_project_nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
+        }
+
+        $project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+        if ( ! $project_id ) {
+            wp_send_json_error( __( 'Invalid project ID.', 'level-up-client-dashboard' ) );
+        }
+
+        global $wpdb;
+        $active  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_table() );
+        $archive = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_archive_table() );
+        $wpdb->delete( $active, array( 'project_id' => $project_id ), array( '%d' ) );
+        $wpdb->delete( $archive, array( 'project_id' => $project_id ), array( '%d' ) );
+
+        // TODO: Update to handle additional custom tables that reference project_id.
+        wp_send_json_success( __( 'Project deleted successfully.', 'level-up-client-dashboard' ) );
     }
 
     /**

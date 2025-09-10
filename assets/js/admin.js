@@ -124,6 +124,74 @@ jQuery(function($){
         });
     });
 
+    $(document).on('click', '.lucd-archive-project', function(e){
+        e.preventDefault();
+        var $form = $(this).closest('form');
+        var projectId = $form.find('input[name="project_id"]').val();
+        var nonce = $form.find('#lucd_archive_project_nonce').val();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        $.post(ajaxurl, {action: 'lucd_archive_project', project_id: projectId, lucd_archive_project_nonce: nonce}, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+        });
+    });
+
+    $(document).on('click', '.lucd-delete-project', function(e){
+        e.preventDefault();
+        if(!confirm(lucdAdmin.i18n.confirmDeleteProject)){
+            return;
+        }
+        var $form = $(this).closest('form');
+        var projectId = $form.find('input[name="project_id"]').val();
+        var nonce = $form.find('#lucd_delete_project_nonce').val();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        $.post(ajaxurl, {action: 'lucd_delete_project', project_id: projectId, lucd_delete_project_nonce: nonce}, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+            if(response.success){
+                $form.remove();
+            }
+        });
+    });
+
+    $(document).on('click', '.lucd-archive-ticket', function(e){
+        e.preventDefault();
+        var $form = $(this).closest('form');
+        var ticketId = $form.find('input[name="ticket_id"]').val();
+        var nonce = $form.find('#lucd_archive_ticket_nonce').val();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        $.post(ajaxurl, {action: 'lucd_archive_ticket', ticket_id: ticketId, lucd_archive_ticket_nonce: nonce}, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+        });
+    });
+
+    $(document).on('click', '.lucd-delete-ticket', function(e){
+        e.preventDefault();
+        if(!confirm(lucdAdmin.i18n.confirmDeleteTicket)){
+            return;
+        }
+        var $form = $(this).closest('form');
+        var ticketId = $form.find('input[name="ticket_id"]').val();
+        var nonce = $form.find('#lucd_delete_ticket_nonce').val();
+        var $feedback = $form.next('.lucd-feedback');
+        $feedback.find('p').text('');
+        $feedback.find('.spinner').addClass('is-active');
+        $.post(ajaxurl, {action: 'lucd_delete_ticket', ticket_id: ticketId, lucd_delete_ticket_nonce: nonce}, function(response){
+            $feedback.find('.spinner').removeClass('is-active');
+            $feedback.find('p').text(response.data);
+            if(response.success){
+                $form.remove();
+            }
+        });
+    });
+
     $('#lucd-add-project-form').on('submit', function(e){
         e.preventDefault();
         var $form = $(this);
