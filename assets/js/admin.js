@@ -1,4 +1,36 @@
 jQuery(function($){
+    $(document).on('click', '.lucd-toggle-password', function(){
+        var $btn = $(this);
+        var $input = $('#' + $btn.data('target'));
+        var $icon = $btn.find('.dashicons');
+        if($input.attr('type') === 'password'){
+            $input.attr('type', 'text');
+            $icon.removeClass('dashicons-visibility').addClass('dashicons-hidden');
+            $btn.attr('aria-label', lucdAdmin.i18n.hidePassword || 'Hide password');
+        } else {
+            $input.attr('type', 'password');
+            $icon.removeClass('dashicons-hidden').addClass('dashicons-visibility');
+            $btn.attr('aria-label', lucdAdmin.i18n.showPassword || 'Show password');
+        }
+    });
+    $(document).on('click', '.lucd-upload-logo', function(e){
+        e.preventDefault();
+        var target = $(this).data('target');
+        var $input = $('#' + target);
+        var $preview = $('#' + target + '_preview');
+        var frame = wp.media({
+            title: 'Select Logo',
+            button: { text: 'Use this logo' },
+            multiple: false,
+            library: { type: 'image' }
+        });
+        frame.on('select', function(){
+            var attachment = frame.state().get('selection').first().toJSON();
+            $input.val(attachment.id);
+            $preview.css('background-image', 'url(' + attachment.url + ')').show();
+        });
+        frame.open();
+    });
     $('#lucd-add-client-form').on('submit', function(e){
         e.preventDefault();
         var $form = $(this);
@@ -11,8 +43,14 @@ jQuery(function($){
             $feedback.find('p').text(response.data);
             if(response.success){
                 $form[0].reset();
+                $('#company_logo_preview').hide().css('background-image','');
             }
         });
+    });
+
+    $(document).on('input', '#mailing_postcode, #company_postcode', function(){
+        var val = $(this).val().replace(/[^0-9-]/g, '').slice(0,10);
+        $(this).val(val);
     });
 
     var clientLabels = [], clientMap = {};

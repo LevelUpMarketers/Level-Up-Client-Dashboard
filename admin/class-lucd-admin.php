@@ -29,6 +29,7 @@ class Level_Up_Client_Dashboard_Admin {
 
         wp_enqueue_style( 'lucd-admin', plugins_url( 'assets/css/admin.css', LUCD_PLUGIN_FILE ) );
         wp_enqueue_script( 'lucd-admin', plugins_url( 'assets/js/admin.js', LUCD_PLUGIN_FILE ), array( 'jquery', 'jquery-ui-autocomplete' ), false, true );
+        wp_enqueue_media();
 
         global $wpdb;
         $client_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
@@ -56,6 +57,8 @@ class Level_Up_Client_Dashboard_Admin {
                 'confirmDeleteClient' => __( 'Are you sure you want to permanently delete this client?', 'level-up-client-dashboard' ),
                 'confirmDeleteProject' => __( 'Are you sure you want to permanently delete this project?', 'level-up-client-dashboard' ),
                 'confirmDeleteTicket'  => __( 'Are you sure you want to permanently delete this ticket?', 'level-up-client-dashboard' ),
+                'showPassword'         => __( 'Show password', 'level-up-client-dashboard' ),
+                'hidePassword'         => __( 'Hide password', 'level-up-client-dashboard' ),
             ),
         ) );
     }

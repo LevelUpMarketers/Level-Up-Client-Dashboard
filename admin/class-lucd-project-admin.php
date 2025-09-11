@@ -64,50 +64,7 @@ class LUC_Project_Admin {
      * @return array
      */
     private static function get_project_fields() {
-        return array(
-            'project_name'         => array( 'label' => __( 'Project Name', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'project_client'       => array( 'label' => __( 'Client', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-project-client' ),
-            'client_id'            => array( 'type' => 'hidden' ),
-            'project_type'         => array(
-                'label'    => __( 'Project Type', 'level-up-client-dashboard' ),
-                'type'     => 'text',
-                'datalist' => array(
-                    __( 'Website Design & Development', 'level-up-client-dashboard' ),
-                    __( 'Website Hosting', 'level-up-client-dashboard' ),
-                    __( 'Domain Management', 'level-up-client-dashboard' ),
-                    __( 'Logo', 'level-up-client-dashboard' ),
-                    __( 'Misc. Graphic Design', 'level-up-client-dashboard' ),
-                    __( 'PPC', 'level-up-client-dashboard' ),
-                    __( 'SEO', 'level-up-client-dashboard' ),
-                    __( 'Social Media Management', 'level-up-client-dashboard' ),
-                    __( 'Social Media Advertising', 'level-up-client-dashboard' ),
-                    __( 'Custom Development', 'level-up-client-dashboard' ),
-                ),
-            ),
-            'start_date'           => array( 'label' => __( 'Start Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
-            'end_date'             => array( 'label' => __( 'End Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
-            'status'               => array(
-                'label'    => __( 'Status', 'level-up-client-dashboard' ),
-                'type'     => 'text',
-                'datalist' => array(
-                    __( 'Not Started', 'level-up-client-dashboard' ),
-                    __( 'In Progress', 'level-up-client-dashboard' ),
-                    __( 'Completed', 'level-up-client-dashboard' ),
-                    __( 'Client Feedback Needed', 'level-up-client-dashboard' ),
-                    __( 'Client Assets Needed', 'level-up-client-dashboard' ),
-                    __( 'Cancelled', 'level-up-client-dashboard' ),
-                ),
-            ),
-            'dev_link'             => array( 'label' => __( 'Dev Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'live_link'            => array( 'label' => __( 'Live Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'gdrive_link'          => array( 'label' => __( 'Google Drive Link', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'total_one_time_cost'  => array( 'label' => __( 'Total One-Time Cost', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
-            'mrr'                  => array( 'label' => __( 'MRR', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
-            'arr'                  => array( 'label' => __( 'ARR', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
-            'monthly_support_time' => array( 'label' => __( 'Monthly Support Time', 'level-up-client-dashboard' ), 'type' => 'number', 'step' => '1' ),
-            'description'          => array( 'label' => __( 'Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
-            'project_updates'      => array( 'label' => __( 'Project Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
-        );
+        return LUC_D_Helpers::get_project_fields();
     }
 
     /**

@@ -1,7 +1,13 @@
 .lucd-field{display:inline-block;margin:0 20px 20px 0;vertical-align:top;}
 .lucd-field label{display:block;margin-bottom:4px;}
 .lucd-field input,.lucd-field select,.lucd-field textarea{min-width:180px;}
+.lucd-field select{max-width:180px;}
 .lucd-feedback{margin-top:20px;}
 .lucd-feedback .spinner{float:none;margin:0 5px 0 0;}
 .lucd-accordion-header{cursor:pointer;margin:0;padding:10px;background:#f0f0f1;border:1px solid #dcdcde;}
 .lucd-accordion-content{display:none;border:1px solid #dcdcde;border-top:none;padding:10px;}
+.lucd-logo-preview{width:150px;height:150px;margin-top:10px;display:none;background-size:contain;background-repeat:no-repeat;background-position:center;border:1px solid #dcdcde;}
+.lucd-password-wrap{position:relative;display:inline-block;}
+.lucd-password-wrap input{padding-right:30px;}
+.lucd-password-field input{max-width:180px;}
+.lucd-toggle-password{position:absolute;top:50%;right:5px;transform:translateY(-50%);background:none;border:0;padding:0;cursor:pointer;}
