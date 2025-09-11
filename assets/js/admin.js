@@ -1,4 +1,18 @@
 jQuery(function($){
+    $(document).on('click', '.lucd-toggle-password', function(){
+        var $btn = $(this);
+        var $input = $('#' + $btn.data('target'));
+        var $icon = $btn.find('.dashicons');
+        if($input.attr('type') === 'password'){
+            $input.attr('type', 'text');
+            $icon.removeClass('dashicons-visibility').addClass('dashicons-hidden');
+            $btn.attr('aria-label', lucdAdmin.i18n.hidePassword || 'Hide password');
+        } else {
+            $input.attr('type', 'password');
+            $icon.removeClass('dashicons-hidden').addClass('dashicons-visibility');
+            $btn.attr('aria-label', lucdAdmin.i18n.showPassword || 'Show password');
+        }
+    });
     $(document).on('click', '.lucd-upload-logo', function(e){
         e.preventDefault();
         var target = $(this).data('target');

@@ -130,9 +130,12 @@ class LUC_Client_Admin {
             echo '</div>';
 
             if ( 'email' === $field ) {
-                echo '<div class="lucd-field">';
+                echo '<div class="lucd-field lucd-password-field">';
                 echo '<label for="password">' . esc_html__( 'Password', 'level-up-client-dashboard' ) . '</label>';
+                echo '<div class="lucd-password-wrap">';
                 echo '<input type="password" id="password" name="password" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{8,}" autocomplete="new-password" />';
+                echo '<button type="button" class="lucd-toggle-password" data-target="password" aria-label="' . esc_attr__( 'Show password', 'level-up-client-dashboard' ) . '"><span class="dashicons dashicons-visibility"></span></button>';
+                echo '</div>';
                 echo '</div>';
             }
         }
