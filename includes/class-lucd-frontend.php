@@ -22,6 +22,7 @@ class LUC_Dashboard_Frontend {
         add_action( 'wp_ajax_nopriv_lucd_load_section', array( __CLASS__, 'load_section' ) );
         add_action( 'wp_ajax_lucd_save_profile', array( __CLASS__, 'save_profile' ) );
         add_action( 'wp_ajax_nopriv_lucd_save_profile', array( __CLASS__, 'save_profile' ) );
+        add_action( 'wp', array( __CLASS__, 'maybe_hide_admin_bar' ) );
     }
 
     /**
@@ -94,6 +95,25 @@ class LUC_Dashboard_Frontend {
                     'nonce'   => wp_create_nonce( 'lucd_dashboard_nonce' ),
                 )
             );
+        }
+    }
+
+    /**
+     * Hide the admin toolbar for subscribers on dashboard pages.
+     */
+    public static function maybe_hide_admin_bar() {
+        if ( ! is_user_logged_in() ) {
+            return;
+        }
+
+        $user = wp_get_current_user();
+        if ( ! in_array( 'subscriber', (array) $user->roles, true ) ) {
+            return;
+        }
+
+        $post = get_post();
+        if ( $post && has_shortcode( $post->post_content, 'lucd_client_dashboard' ) ) {
+            show_admin_bar( false );
         }
     }
 
