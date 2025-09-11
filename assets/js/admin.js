@@ -30,6 +30,7 @@ jQuery(function($){
             var $hidden = $input.hasClass('lucd-project-client') ? $form.find('.lucd-project-client-id') : $form.find('.lucd-ticket-client-id');
             $input.autocomplete({
                 source: clientLabels,
+                minLength: 0,
                 select: function(event, ui){
                     $hidden.val(clientMap[ui.item.value]);
                 },
@@ -39,6 +40,8 @@ jQuery(function($){
                         $(this).val('');
                     }
                 }
+            }).on('focus', function(){
+                $(this).autocomplete('search', '');
             }).on('input', function(){
                 $hidden.val('');
             });
