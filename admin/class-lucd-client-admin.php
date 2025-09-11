@@ -237,9 +237,11 @@ class LUC_Client_Admin {
         $inserted = $wpdb->insert( $table, $data, $formats );
 
         if ( false === $inserted ) {
+            $db_error   = $wpdb->last_error;
+            $last_query = $wpdb->last_query;
             wp_delete_user( $user_id );
-            $error = $wpdb->last_error ? $wpdb->last_error : __( 'Failed to insert client record.', 'level-up-client-dashboard' );
-            wp_send_json_error( $error );
+            $error_msg = $db_error ? $db_error : sprintf( __( 'Database insert failed. Query: %s', 'level-up-client-dashboard' ), $last_query );
+            wp_send_json_error( $error_msg );
         }
 
         wp_send_json_success( __( 'Client added successfully.', 'level-up-client-dashboard' ) );
@@ -368,8 +370,10 @@ class LUC_Client_Admin {
         $updated = $wpdb->update( $table, $data, array( 'client_id' => $client_id ), $formats, array( '%d' ) );
 
         if ( false === $updated ) {
-            $error = $wpdb->last_error ? $wpdb->last_error : __( 'Failed to update client record.', 'level-up-client-dashboard' );
-            wp_send_json_error( $error );
+            $db_error   = $wpdb->last_error;
+            $last_query = $wpdb->last_query;
+            $error_msg  = $db_error ? $db_error : sprintf( __( 'Database update failed. Query: %s', 'level-up-client-dashboard' ), $last_query );
+            wp_send_json_error( $error_msg );
         }
 
         wp_send_json_success( __( 'Client updated successfully.', 'level-up-client-dashboard' ) );
