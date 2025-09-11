@@ -81,7 +81,6 @@ class LUC_Client_Admin {
             'company_state'    => array( 'label' => __( 'Company State', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_postcode' => array( 'label' => __( 'Company Postcode', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_country'  => array( 'label' => __( 'Company Country', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_logo'     => array( 'label' => __( 'Company Logo', 'level-up-client-dashboard' ), 'type' => 'hidden' ),
             'social_facebook'  => array( 'label' => __( 'Facebook', 'level-up-client-dashboard' ), 'type' => 'url' ),
             'social_twitter'   => array( 'label' => __( 'Twitter', 'level-up-client-dashboard' ), 'type' => 'url' ),
             'social_instagram' => array( 'label' => __( 'Instagram', 'level-up-client-dashboard' ), 'type' => 'url' ),
@@ -89,6 +88,7 @@ class LUC_Client_Admin {
             'social_yelp'      => array( 'label' => __( 'Yelp', 'level-up-client-dashboard' ), 'type' => 'url' ),
             'social_bbb'       => array( 'label' => __( 'BBB', 'level-up-client-dashboard' ), 'type' => 'url' ),
             'client_since'     => array( 'label' => __( 'Client Since', 'level-up-client-dashboard' ), 'type' => 'date' ),
+            'company_logo'     => array( 'label' => __( 'Company Logo', 'level-up-client-dashboard' ), 'type' => 'hidden' ),
         );
     }
 
@@ -102,13 +102,13 @@ class LUC_Client_Admin {
             $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
 
             if ( 'company_logo' === $field ) {
-                $img_url = $value ? wp_get_attachment_image_url( (int) $value, 'thumbnail' ) : '';
+                $img_url = $value ? wp_get_attachment_image_url( (int) $value, 'full' ) : '';
                 echo '<div class="lucd-field">';
                 echo '<label for="company_logo">' . esc_html( $data['label'] ) . '</label>';
                 echo '<input type="hidden" id="company_logo" name="company_logo" value="' . esc_attr( $value ) . '" />';
                 echo '<button type="button" class="button lucd-upload-logo" data-target="company_logo">' . esc_html__( 'Select Logo', 'level-up-client-dashboard' ) . '</button>';
-                $style = $img_url ? '' : ' style="display:none;"';
-                echo '<div class="lucd-logo-preview"><img id="company_logo_preview" src="' . esc_url( $img_url ) . '"' . $style . ' /></div>';
+                $style = $img_url ? ' style="background-image:url(' . esc_url( $img_url ) . ');display:block;"' : ' style="display:none;"';
+                echo '<div class="lucd-logo-preview" id="company_logo_preview"' . $style . '></div>';
                 echo '</div>';
                 continue;
             }
@@ -174,9 +174,32 @@ class LUC_Client_Admin {
             if ( 'company_logo' === $field ) {
                 $data[ $field ] = isset( $_POST[ $field ] ) ? absint( wp_unslash( $_POST[ $field ] ) ) : 0;
                 $formats[]      = '%d';
-            } else {
-                $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
-                $formats[]      = '%s';
+                continue;
+            }
+
+            $value       = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            $data[ $field ] = $value;
+            $formats[]      = '%s';
+
+            if ( 'email' === $field ) {
+                if ( empty( $value ) || ! is_email( $value ) ) {
+                    wp_send_json_error( __( 'A valid email is required.', 'level-up-client-dashboard' ) );
+                }
+            }
+
+            $url_fields = array( 'company_website', 'social_facebook', 'social_twitter', 'social_instagram', 'social_linkedin', 'social_yelp', 'social_bbb' );
+            if ( in_array( $field, $url_fields, true ) && $value && ! filter_var( $value, FILTER_VALIDATE_URL ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid URL.', 'level-up-client-dashboard' ), $info['label'] ) );
+            }
+
+            if ( 'client_since' === $field && $value && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
+                wp_send_json_error( __( 'Client Since must be a valid date (YYYY-MM-DD).', 'level-up-client-dashboard' ) );
+            }
+        }
+
+        foreach ( array( 'first_name', 'last_name' ) as $required ) {
+            if ( empty( $data[ $required ] ) ) {
+                wp_send_json_error( sprintf( __( '%s is required.', 'level-up-client-dashboard' ), $fields[ $required ]['label'] ) );
             }
         }
 
@@ -184,10 +207,6 @@ class LUC_Client_Admin {
 
         if ( ! self::is_strong_password( $password ) ) {
             wp_send_json_error( __( 'Password must be at least 8 characters and include upper and lower case letters, numbers, and special characters.', 'level-up-client-dashboard' ) );
-        }
-
-        if ( empty( $data['email'] ) || ! is_email( $data['email'] ) ) {
-            wp_send_json_error( __( 'A valid email is required.', 'level-up-client-dashboard' ) );
         }
 
         if ( email_exists( $data['email'] ) ) {
@@ -206,10 +225,10 @@ class LUC_Client_Admin {
         );
 
         if ( is_wp_error( $user_id ) ) {
-            wp_send_json_error( __( 'Failed to create user.', 'level-up-client-dashboard' ) );
+            wp_send_json_error( $user_id->get_error_message() );
         }
 
-        $data['wp_user_id'] = $user_id;
+        $data['wp_user_id']  = $user_id;
         $data['client_since'] = $data['client_since'] ? $data['client_since'] : current_time( 'Y-m-d' );
 
         $table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
@@ -217,9 +236,10 @@ class LUC_Client_Admin {
         global $wpdb;
         $inserted = $wpdb->insert( $table, $data, $formats );
 
-        if ( ! $inserted ) {
+        if ( false === $inserted ) {
             wp_delete_user( $user_id );
-            wp_send_json_error( __( 'Failed to insert client record.', 'level-up-client-dashboard' ) );
+            $error = $wpdb->last_error ? $wpdb->last_error : __( 'Failed to insert client record.', 'level-up-client-dashboard' );
+            wp_send_json_error( $error );
         }
 
         wp_send_json_success( __( 'Client added successfully.', 'level-up-client-dashboard' ) );
@@ -288,15 +308,40 @@ class LUC_Client_Admin {
             if ( 'company_logo' === $field ) {
                 $data[ $field ] = isset( $_POST[ $field ] ) ? absint( wp_unslash( $_POST[ $field ] ) ) : 0;
                 $formats[]      = '%d';
-            } else {
-                $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
-                $formats[]      = '%s';
+                continue;
+            }
+
+            $value       = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            $data[ $field ] = $value;
+            $formats[]      = '%s';
+
+            if ( 'email' === $field ) {
+                if ( empty( $value ) || ! is_email( $value ) ) {
+                    wp_send_json_error( __( 'A valid email is required.', 'level-up-client-dashboard' ) );
+                }
+            }
+
+            $url_fields = array( 'company_website', 'social_facebook', 'social_twitter', 'social_instagram', 'social_linkedin', 'social_yelp', 'social_bbb' );
+            if ( in_array( $field, $url_fields, true ) && $value && ! filter_var( $value, FILTER_VALIDATE_URL ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid URL.', 'level-up-client-dashboard' ), $info['label'] ) );
+            }
+
+            if ( 'client_since' === $field && $value && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
+                wp_send_json_error( __( 'Client Since must be a valid date (YYYY-MM-DD).', 'level-up-client-dashboard' ) );
+            }
+        }
+
+        foreach ( array( 'first_name', 'last_name' ) as $required ) {
+            if ( empty( $data[ $required ] ) ) {
+                wp_send_json_error( sprintf( __( '%s is required.', 'level-up-client-dashboard' ), $fields[ $required ]['label'] ) );
             }
         }
 
         $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
 
-        $user_id = (int) get_user_by( 'email', $data['email'] )->ID;
+        $table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+        global $wpdb;
+        $user_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT wp_user_id FROM $table WHERE client_id = %d", $client_id ) );
         if ( ! $user_id ) {
             wp_send_json_error( __( 'Associated user not found.', 'level-up-client-dashboard' ) );
         }
@@ -315,15 +360,16 @@ class LUC_Client_Admin {
             $userdata['user_pass'] = $password;
         }
 
-        wp_update_user( $userdata );
+        $result = wp_update_user( $userdata );
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( $result->get_error_message() );
+        }
 
-        $table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-
-        global $wpdb;
         $updated = $wpdb->update( $table, $data, array( 'client_id' => $client_id ), $formats, array( '%d' ) );
 
         if ( false === $updated ) {
-            wp_send_json_error( __( 'Failed to update client record.', 'level-up-client-dashboard' ) );
+            $error = $wpdb->last_error ? $wpdb->last_error : __( 'Failed to update client record.', 'level-up-client-dashboard' );
+            wp_send_json_error( $error );
         }
 
         wp_send_json_success( __( 'Client updated successfully.', 'level-up-client-dashboard' ) );

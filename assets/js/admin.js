@@ -13,7 +13,7 @@ jQuery(function($){
         frame.on('select', function(){
             var attachment = frame.state().get('selection').first().toJSON();
             $input.val(attachment.id);
-            $preview.attr('src', attachment.url).show();
+            $preview.css('background-image', 'url(' + attachment.url + ')').show();
         });
         frame.open();
     });
@@ -29,6 +29,7 @@ jQuery(function($){
             $feedback.find('p').text(response.data);
             if(response.success){
                 $form[0].reset();
+                $('#company_logo_preview').hide().css('background-image','');
             }
         });
     });
