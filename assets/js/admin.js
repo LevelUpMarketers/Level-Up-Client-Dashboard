@@ -1,4 +1,22 @@
 jQuery(function($){
+    $(document).on('click', '.lucd-upload-logo', function(e){
+        e.preventDefault();
+        var target = $(this).data('target');
+        var $input = $('#' + target);
+        var $preview = $('#' + target + '_preview');
+        var frame = wp.media({
+            title: 'Select Logo',
+            button: { text: 'Use this logo' },
+            multiple: false,
+            library: { type: 'image' }
+        });
+        frame.on('select', function(){
+            var attachment = frame.state().get('selection').first().toJSON();
+            $input.val(attachment.id);
+            $preview.attr('src', attachment.url).show();
+        });
+        frame.open();
+    });
     $('#lucd-add-client-form').on('submit', function(e){
         e.preventDefault();
         var $form = $(this);

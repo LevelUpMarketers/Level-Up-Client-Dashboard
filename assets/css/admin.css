@@ -5,3 +5,4 @@
 .lucd-feedback .spinner{float:none;margin:0 5px 0 0;}
 .lucd-accordion-header{cursor:pointer;margin:0;padding:10px;background:#f0f0f1;border:1px solid #dcdcde;}
 .lucd-accordion-content{display:none;border:1px solid #dcdcde;border-top:none;padding:10px;}
+.lucd-logo-preview img{max-width:150px;height:auto;margin-top:10px;display:block;}

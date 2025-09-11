@@ -29,6 +29,7 @@ class Level_Up_Client_Dashboard_Admin {
 
         wp_enqueue_style( 'lucd-admin', plugins_url( 'assets/css/admin.css', LUCD_PLUGIN_FILE ) );
         wp_enqueue_script( 'lucd-admin', plugins_url( 'assets/js/admin.js', LUCD_PLUGIN_FILE ), array( 'jquery', 'jquery-ui-autocomplete' ), false, true );
+        wp_enqueue_media();
 
         global $wpdb;
         $client_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );

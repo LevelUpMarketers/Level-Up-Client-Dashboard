@@ -26,6 +26,7 @@ Stores individual client records and associated company information.
 | `company_state` | varchar(100) | State or region of the company's physical address. |
 | `company_postcode` | varchar(20) | Postal or ZIP code of the company's physical address. |
 | `company_country` | varchar(100) | Country of the company's physical address. |
+| `company_logo` | bigint(20) unsigned | Attachment ID for the client's logo. |
 | `social_facebook` | varchar(255) | URL to the company's Facebook page. |
 | `social_twitter` | varchar(255) | URL to the company's Twitter profile. |
 | `social_instagram` | varchar(255) | URL to the company's Instagram profile. |

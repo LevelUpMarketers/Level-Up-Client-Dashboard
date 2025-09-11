@@ -81,6 +81,7 @@ class LUC_Client_Admin {
             'company_state'    => array( 'label' => __( 'Company State', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_postcode' => array( 'label' => __( 'Company Postcode', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_country'  => array( 'label' => __( 'Company Country', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'company_logo'     => array( 'label' => __( 'Company Logo', 'level-up-client-dashboard' ), 'type' => 'hidden' ),
             'social_facebook'  => array( 'label' => __( 'Facebook', 'level-up-client-dashboard' ), 'type' => 'url' ),
             'social_twitter'   => array( 'label' => __( 'Twitter', 'level-up-client-dashboard' ), 'type' => 'url' ),
             'social_instagram' => array( 'label' => __( 'Instagram', 'level-up-client-dashboard' ), 'type' => 'url' ),
@@ -99,6 +100,19 @@ class LUC_Client_Admin {
     public static function render_client_fields( $client = array() ) {
         foreach ( self::get_client_fields() as $field => $data ) {
             $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
+
+            if ( 'company_logo' === $field ) {
+                $img_url = $value ? wp_get_attachment_image_url( (int) $value, 'thumbnail' ) : '';
+                echo '<div class="lucd-field">';
+                echo '<label for="company_logo">' . esc_html( $data['label'] ) . '</label>';
+                echo '<input type="hidden" id="company_logo" name="company_logo" value="' . esc_attr( $value ) . '" />';
+                echo '<button type="button" class="button lucd-upload-logo" data-target="company_logo">' . esc_html__( 'Select Logo', 'level-up-client-dashboard' ) . '</button>';
+                $style = $img_url ? '' : ' style="display:none;"';
+                echo '<div class="lucd-logo-preview"><img id="company_logo_preview" src="' . esc_url( $img_url ) . '"' . $style . ' /></div>';
+                echo '</div>';
+                continue;
+            }
+
             echo '<div class="lucd-field">';
             echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
             printf(
@@ -153,10 +167,17 @@ class LUC_Client_Admin {
             wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
         }
 
-        $fields = self::get_client_fields();
-        $data   = array();
+        $fields  = self::get_client_fields();
+        $data    = array();
+        $formats = array();
         foreach ( $fields as $field => $info ) {
-            $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            if ( 'company_logo' === $field ) {
+                $data[ $field ] = isset( $_POST[ $field ] ) ? absint( wp_unslash( $_POST[ $field ] ) ) : 0;
+                $formats[]      = '%d';
+            } else {
+                $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+                $formats[]      = '%s';
+            }
         }
 
         $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
@@ -191,11 +212,10 @@ class LUC_Client_Admin {
         $data['wp_user_id'] = $user_id;
         $data['client_since'] = $data['client_since'] ? $data['client_since'] : current_time( 'Y-m-d' );
 
-        $table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-        $format = array_fill( 0, count( $data ), '%s' );
+        $table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
 
         global $wpdb;
-        $inserted = $wpdb->insert( $table, $data, $format );
+        $inserted = $wpdb->insert( $table, $data, $formats );
 
         if ( ! $inserted ) {
             wp_delete_user( $user_id );
@@ -261,10 +281,17 @@ class LUC_Client_Admin {
             wp_send_json_error( __( 'Invalid client ID.', 'level-up-client-dashboard' ) );
         }
 
-        $fields = self::get_client_fields();
-        $data   = array();
+        $fields  = self::get_client_fields();
+        $data    = array();
+        $formats = array();
         foreach ( $fields as $field => $info ) {
-            $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            if ( 'company_logo' === $field ) {
+                $data[ $field ] = isset( $_POST[ $field ] ) ? absint( wp_unslash( $_POST[ $field ] ) ) : 0;
+                $formats[]      = '%d';
+            } else {
+                $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+                $formats[]      = '%s';
+            }
         }
 
         $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
@@ -290,8 +317,7 @@ class LUC_Client_Admin {
 
         wp_update_user( $userdata );
 
-        $table   = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-        $formats = array_fill( 0, count( $data ), '%s' );
+        $table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
 
         global $wpdb;
         $updated = $wpdb->update( $table, $data, array( 'client_id' => $client_id ), $formats, array( '%d' ) );
