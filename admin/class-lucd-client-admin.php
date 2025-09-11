@@ -112,6 +112,31 @@ class LUC_Client_Admin {
     }
 
     /**
+     * Validate password strength.
+     *
+     * @param string $password Password to validate.
+     * @return bool
+     */
+    private static function is_strong_password( $password ) {
+        if ( strlen( $password ) < 8 ) {
+            return false;
+        }
+        if ( ! preg_match( '/[A-Z]/', $password ) ) {
+            return false;
+        }
+        if ( ! preg_match( '/[a-z]/', $password ) ) {
+            return false;
+        }
+        if ( ! preg_match( '/[0-9]/', $password ) ) {
+            return false;
+        }
+        if ( ! preg_match( '/[^\\w\\s]/', $password ) ) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Handle AJAX request to add a client.
      */
     public static function handle_add_client() {
@@ -125,6 +150,12 @@ class LUC_Client_Admin {
         $data   = array();
         foreach ( $fields as $field => $info ) {
             $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+        }
+
+        $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
+
+        if ( ! self::is_strong_password( $password ) ) {
+            wp_send_json_error( __( 'Password must be at least 8 characters and include upper and lower case letters, numbers, and special characters.', 'level-up-client-dashboard' ) );
         }
 
         if ( empty( $data['email'] ) || ! is_email( $data['email'] ) ) {
@@ -141,6 +172,7 @@ class LUC_Client_Admin {
                 'user_email' => $data['email'],
                 'first_name' => $data['first_name'],
                 'last_name'  => $data['last_name'],
+                'user_pass'  => $password,
                 'role'       => 'subscriber',
             )
         );
@@ -192,6 +224,10 @@ class LUC_Client_Admin {
         ob_start();
         echo '<form class="lucd-edit-client-form">';
         self::render_client_fields( $client );
+        echo '<div class="lucd-field">';
+        echo '<label for="password">' . esc_html__( 'Password', 'level-up-client-dashboard' ) . '</label>';
+        echo '<input type="password" id="password" name="password" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{8,}" autocomplete="new-password" />';
+        echo '</div>';
         echo '<input type="hidden" name="action" value="lucd_update_client" />';
         echo '<input type="hidden" name="client_id" value="' . esc_attr( $client_id ) . '" />';
         wp_nonce_field( 'lucd_update_client', 'lucd_update_nonce' );
@@ -228,19 +264,28 @@ class LUC_Client_Admin {
             $data[ $field ] = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
         }
 
+        $password = isset( $_POST['password'] ) ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : '';
+
         $user_id = (int) get_user_by( 'email', $data['email'] )->ID;
         if ( ! $user_id ) {
             wp_send_json_error( __( 'Associated user not found.', 'level-up-client-dashboard' ) );
         }
 
-        wp_update_user(
-            array(
-                'ID'         => $user_id,
-                'user_email' => $data['email'],
-                'first_name' => $data['first_name'],
-                'last_name'  => $data['last_name'],
-            )
+        $userdata = array(
+            'ID'         => $user_id,
+            'user_email' => $data['email'],
+            'first_name' => $data['first_name'],
+            'last_name'  => $data['last_name'],
         );
+
+        if ( $password ) {
+            if ( ! self::is_strong_password( $password ) ) {
+                wp_send_json_error( __( 'Password must be at least 8 characters and include upper and lower case letters, numbers, and special characters.', 'level-up-client-dashboard' ) );
+            }
+            $userdata['user_pass'] = $password;
+        }
+
+        wp_update_user( $userdata );
 
         $table   = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
         $formats = array_fill( 0, count( $data ), '%s' );

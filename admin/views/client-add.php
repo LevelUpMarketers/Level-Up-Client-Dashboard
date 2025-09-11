@@ -7,6 +7,10 @@
 ?>
 <form id="lucd-add-client-form">
     <?php LUC_Client_Admin::render_client_fields(); ?>
+    <div class="lucd-field">
+        <label for="password"><?php esc_html_e( 'Password', 'level-up-client-dashboard' ); ?></label>
+        <input type="password" id="password" name="password" required pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}" autocomplete="new-password" />
+    </div>
     <input type="hidden" name="action" value="lucd_add_client" />
     <?php wp_nonce_field( 'lucd_add_client', 'lucd_nonce' ); ?>
     <p><button type="submit" class="button button-primary"><?php esc_html_e( 'Add Client', 'level-up-client-dashboard' ); ?></button></p>
