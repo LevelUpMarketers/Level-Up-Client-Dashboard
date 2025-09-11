@@ -30,6 +30,8 @@ class Level_Up_Client_Dashboard {
      * Initialize the plugin.
      */
     public static function init() {
+        require_once LUCD_PLUGIN_DIR . 'includes/class-lucd-helpers.php';
+
         if ( is_admin() ) {
             require_once LUCD_PLUGIN_DIR . 'admin/class-lucd-admin.php';
             require_once LUCD_PLUGIN_DIR . 'admin/class-lucd-client-admin.php';

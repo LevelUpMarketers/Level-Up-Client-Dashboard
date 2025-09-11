@@ -70,7 +70,7 @@ class LUC_Client_Admin {
             'mailing_address1' => array( 'label' => __( 'Mailing Address 1', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'mailing_address2' => array( 'label' => __( 'Mailing Address 2', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'mailing_city'     => array( 'label' => __( 'Mailing City', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'mailing_state'    => array( 'label' => __( 'Mailing State', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'mailing_state'    => array( 'label' => __( 'Mailing State', 'level-up-client-dashboard' ), 'type' => 'select', 'options' => LUC_D_Helpers::get_us_states() ),
             'mailing_postcode' => array( 'label' => __( 'Mailing Postcode', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'mailing_country'  => array( 'label' => __( 'Mailing Country', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_name'     => array( 'label' => __( 'Company Name', 'level-up-client-dashboard' ), 'type' => 'text' ),
@@ -78,7 +78,7 @@ class LUC_Client_Admin {
             'company_address1' => array( 'label' => __( 'Company Address 1', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_address2' => array( 'label' => __( 'Company Address 2', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_city'     => array( 'label' => __( 'Company City', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_state'    => array( 'label' => __( 'Company State', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'company_state'    => array( 'label' => __( 'Company State', 'level-up-client-dashboard' ), 'type' => 'select', 'options' => LUC_D_Helpers::get_us_states() ),
             'company_postcode' => array( 'label' => __( 'Company Postcode', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'company_country'  => array( 'label' => __( 'Company Country', 'level-up-client-dashboard' ), 'type' => 'text' ),
             'social_facebook'  => array( 'label' => __( 'Facebook', 'level-up-client-dashboard' ), 'type' => 'url' ),
@@ -109,6 +109,20 @@ class LUC_Client_Admin {
                 echo '<button type="button" class="button lucd-upload-logo" data-target="company_logo">' . esc_html__( 'Select Logo', 'level-up-client-dashboard' ) . '</button>';
                 $style = $img_url ? ' style="background-image:url(' . esc_url( $img_url ) . ');display:block;"' : ' style="display:none;"';
                 echo '<div class="lucd-logo-preview" id="company_logo_preview"' . $style . '></div>';
+                echo '</div>';
+                continue;
+            }
+
+            if ( 'select' === $data['type'] ) {
+                $states = $data['options'];
+                echo '<div class="lucd-field">';
+                echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
+                echo '<select id="' . esc_attr( $field ) . '" name="' . esc_attr( $field ) . '">';
+                echo '<option value="" disabled' . selected( '', $value, false ) . '>' . esc_html__( 'Choose a State...', 'level-up-client-dashboard' ) . '</option>';
+                foreach ( $states as $abbr => $name ) {
+                    echo '<option value="' . esc_attr( $abbr ) . '"' . selected( $value, $abbr, false ) . '>' . esc_html( $name ) . '</option>';
+                }
+                echo '</select>';
                 echo '</div>';
                 continue;
             }
@@ -217,6 +231,10 @@ class LUC_Client_Admin {
 
             if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! self::is_valid_zip( $value ) ) {
                 wp_send_json_error( sprintf( __( '%s must be a valid U.S. ZIP code.', 'level-up-client-dashboard' ), $info['label'] ) );
+            }
+
+            if ( in_array( $field, array( 'mailing_state', 'company_state' ), true ) && $value && ! array_key_exists( $value, LUC_D_Helpers::get_us_states() ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid U.S. state or territory.', 'level-up-client-dashboard' ), $info['label'] ) );
             }
         }
 
@@ -357,6 +375,10 @@ class LUC_Client_Admin {
 
             if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! self::is_valid_zip( $value ) ) {
                 wp_send_json_error( sprintf( __( '%s must be a valid U.S. ZIP code.', 'level-up-client-dashboard' ), $info['label'] ) );
+            }
+
+            if ( in_array( $field, array( 'mailing_state', 'company_state' ), true ) && $value && ! array_key_exists( $value, LUC_D_Helpers::get_us_states() ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid U.S. state or territory.', 'level-up-client-dashboard' ), $info['label'] ) );
             }
         }
 

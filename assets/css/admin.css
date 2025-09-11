@@ -1,6 +1,7 @@
 .lucd-field{display:inline-block;margin:0 20px 20px 0;vertical-align:top;}
 .lucd-field label{display:block;margin-bottom:4px;}
 .lucd-field input,.lucd-field select,.lucd-field textarea{min-width:180px;}
+.lucd-field select{max-width:180px;}
 .lucd-feedback{margin-top:20px;}
 .lucd-feedback .spinner{float:none;margin:0 5px 0 0;}
 .lucd-accordion-header{cursor:pointer;margin:0;padding:10px;background:#f0f0f1;border:1px solid #dcdcde;}
