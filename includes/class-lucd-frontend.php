@@ -248,37 +248,72 @@ class LUC_Dashboard_Frontend {
         global $wpdb;
 
         $table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-        $client = $wpdb->get_row( $wpdb->prepare( "SELECT first_name, last_name, email FROM {$table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
 
         if ( ! $client ) {
             return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
         }
 
+        $fields = LUC_D_Helpers::get_client_fields();
+
         ob_start();
+        $logo_url = '';
+        if ( ! empty( $client['company_logo'] ) ) {
+            $logo_url = wp_get_attachment_image_url( (int) $client['company_logo'], 'full' );
+        }
         ?>
         <div class="lucd-profile-view">
-            <p><strong><?php esc_html_e( 'First Name:', 'lucd' ); ?></strong> <?php echo esc_html( $client['first_name'] ); ?></p>
-            <p><strong><?php esc_html_e( 'Last Name:', 'lucd' ); ?></strong> <?php echo esc_html( $client['last_name'] ); ?></p>
-            <p><strong><?php esc_html_e( 'Email:', 'lucd' ); ?></strong> <?php echo esc_html( $client['email'] ); ?></p>
+            <?php if ( $logo_url ) : ?>
+                <div class="lucd-logo-preview" style="background-image:url(<?php echo esc_url( $logo_url ); ?>);display:block;"></div>
+            <?php endif; ?>
+            <?php foreach ( $fields as $field => $info ) : ?>
+                <?php
+                if ( 'client_since' === $field || 'company_logo' === $field ) {
+                    continue;
+                }
+                $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
+                if ( in_array( $field, array( 'mailing_state', 'company_state' ), true ) ) {
+                    $states = LUC_D_Helpers::get_us_states();
+                    $value  = isset( $states[ $value ] ) ? $states[ $value ] : $value;
+                }
+                ?>
+                <p><strong><?php echo esc_html( $info['label'] ); ?>:</strong> <?php echo esc_html( $value ); ?></p>
+            <?php endforeach; ?>
             <button class="lucd-edit-profile"><?php esc_html_e( 'Edit Profile Info', 'lucd' ); ?></button>
         </div>
-        <form class="lucd-profile-edit" style="display:none;">
+        <form class="lucd-profile-edit" style="display:none;" enctype="multipart/form-data">
             <input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'lucd_save_profile' ) ); ?>" />
-            <p>
-                <label><?php esc_html_e( 'First Name', 'lucd' ); ?><br />
-                    <input type="text" name="first_name" value="<?php echo esc_attr( $client['first_name'] ); ?>" />
-                </label>
-            </p>
-            <p>
-                <label><?php esc_html_e( 'Last Name', 'lucd' ); ?><br />
-                    <input type="text" name="last_name" value="<?php echo esc_attr( $client['last_name'] ); ?>" />
-                </label>
-            </p>
-            <p>
-                <label><?php esc_html_e( 'Email', 'lucd' ); ?><br />
-                    <input type="email" name="email" value="<?php echo esc_attr( $client['email'] ); ?>" />
-                </label>
-            </p>
+            <?php foreach ( $fields as $field => $info ) : ?>
+                <?php
+                if ( 'client_since' === $field ) {
+                    continue;
+                }
+                $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
+                ?>
+                <p>
+                    <label><?php echo esc_html( $info['label'] ); ?><br />
+                    <?php if ( 'select' === $info['type'] ) : ?>
+                        <select name="<?php echo esc_attr( $field ); ?>">
+                            <option value="" disabled <?php selected( '', $value ); ?>><?php esc_html_e( 'Choose a State...', 'lucd' ); ?></option>
+                            <?php foreach ( $info['options'] as $abbr => $name ) : ?>
+                                <option value="<?php echo esc_attr( $abbr ); ?>" <?php selected( $value, $abbr ); ?>><?php echo esc_html( $name ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php elseif ( 'company_logo' === $field ) : ?>
+                        <input type="file" name="company_logo" id="company_logo" accept="image/*" />
+                        <div class="lucd-logo-preview" id="company_logo_preview" <?php echo $logo_url ? 'style="background-image:url(' . esc_url( $logo_url ) . ');display:block;"' : 'style="display:none;"'; ?>></div>
+                    <?php else : ?>
+                        <?php
+                        $extra = '';
+                        if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) ) {
+                            $extra = ' pattern="\\d{5}(?:-\\d{4})?" maxlength="10"';
+                        }
+                        ?>
+                        <input type="<?php echo esc_attr( $info['type'] ); ?>" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $value ); ?>"<?php echo $extra; ?> />
+                    <?php endif; ?>
+                    </label>
+                </p>
+            <?php endforeach; ?>
             <p>
                 <button type="submit"><?php esc_html_e( 'Save', 'lucd' ); ?></button>
                 <button type="button" class="lucd-cancel-edit"><?php esc_html_e( 'Cancel', 'lucd' ); ?></button>
@@ -300,25 +335,83 @@ class LUC_Dashboard_Frontend {
 
         $user_id = get_current_user_id();
 
-        $data = array(
-            'first_name' => isset( $_POST['first_name'] ) ? sanitize_text_field( wp_unslash( $_POST['first_name'] ) ) : '',
-            'last_name'  => isset( $_POST['last_name'] ) ? sanitize_text_field( wp_unslash( $_POST['last_name'] ) ) : '',
-            'email'      => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
-        );
+        $fields = LUC_D_Helpers::get_client_fields();
+        unset( $fields['client_since'] );
 
-        if ( empty( $data['email'] ) || ! is_email( $data['email'] ) ) {
-            wp_send_json_error( __( 'Invalid email address.', 'lucd' ) );
+        $data    = array();
+        $formats = array();
+
+        foreach ( $fields as $field => $info ) {
+            if ( 'company_logo' === $field ) {
+                continue;
+            }
+
+            $raw = isset( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '';
+            switch ( $info['type'] ) {
+                case 'email':
+                    $value = sanitize_email( $raw );
+                    if ( empty( $value ) || ! is_email( $value ) ) {
+                        wp_send_json_error( __( 'Invalid email address.', 'lucd' ) );
+                    }
+                    break;
+                case 'url':
+                    $value = esc_url_raw( $raw );
+                    break;
+                default:
+                    $value = sanitize_text_field( $raw );
+            }
+
+            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! LUC_D_Helpers::is_valid_zip( $value ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid U.S. ZIP code.', 'lucd' ), $info['label'] ) );
+            }
+
+            if ( in_array( $field, array( 'mailing_state', 'company_state' ), true ) && $value && ! array_key_exists( $value, LUC_D_Helpers::get_us_states() ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid U.S. state or territory.', 'lucd' ), $info['label'] ) );
+            }
+
+            $data[ $field ] = $value;
+            $formats[]      = '%s';
+        }
+
+        foreach ( array( 'first_name', 'last_name' ) as $required ) {
+            if ( empty( $data[ $required ] ) ) {
+                wp_send_json_error( sprintf( __( '%s is required.', 'lucd' ), $fields[ $required ]['label'] ) );
+            }
+        }
+
+        if ( ! empty( $_FILES['company_logo']['name'] ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            $upload = wp_handle_upload( $_FILES['company_logo'], array( 'test_form' => false, 'mimes' => array( 'jpg|jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif' ) ) );
+            if ( isset( $upload['error'] ) ) {
+                wp_send_json_error( $upload['error'] );
+            }
+            $attachment_id = wp_insert_attachment( array(
+                'post_mime_type' => $upload['type'],
+                'post_title'     => sanitize_file_name( $_FILES['company_logo']['name'] ),
+                'post_content'   => '',
+                'post_status'    => 'inherit',
+            ), $upload['file'] );
+            $attach_data = wp_generate_attachment_metadata( $attachment_id, $upload['file'] );
+            wp_update_attachment_metadata( $attachment_id, $attach_data );
+            $data['company_logo'] = $attachment_id;
+            $formats[]            = '%d';
+        }
+
+        $userdata = array(
+            'ID'         => $user_id,
+            'user_email' => $data['email'],
+            'first_name' => $data['first_name'],
+            'last_name'  => $data['last_name'],
+        );
+        $result = wp_update_user( $userdata );
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( $result->get_error_message() );
         }
 
         global $wpdb;
-        $table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-        $updated = $wpdb->update(
-            $table,
-            $data,
-            array( 'wp_user_id' => $user_id ),
-            array( '%s', '%s', '%s' ),
-            array( '%d' )
-        );
+        $table   = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+        $updated = $wpdb->update( $table, $data, array( 'wp_user_id' => $user_id ), $formats, array( '%d' ) );
 
         if ( false === $updated ) {
             wp_send_json_error( __( 'Could not update profile.', 'lucd' ) );

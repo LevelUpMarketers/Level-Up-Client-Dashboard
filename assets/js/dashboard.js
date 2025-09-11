@@ -55,18 +55,41 @@ jQuery( function( $ ) {
     $( document ).on( 'submit', '.lucd-profile-edit', function( e ) {
         e.preventDefault();
         var $form = $( this );
-        var data  = $form.serialize();
-        data += '&action=lucd_save_profile';
-        $.post( lucdDashboard.ajaxUrl, data, function( response ) {
-            if ( response.success ) {
-                var $section = $form.closest( '.lucd-nav-item' );
-                $form.hide();
-                loadSection( 'profile', $section );
-            } else {
-                alert( response.data );
+        var formData = new FormData( this );
+        formData.append( 'action', 'lucd_save_profile' );
+        $.ajax( {
+            url: lucdDashboard.ajaxUrl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function( response ) {
+                if ( response.success ) {
+                    var $section = $form.closest( '.lucd-nav-item' );
+                    $form.hide();
+                    loadSection( 'profile', $section );
+                } else {
+                    alert( response.data );
+                }
             }
         } );
     } );
+
+    $( document ).on( 'change', '#company_logo', function() {
+        var file = this.files[0];
+        if ( file ) {
+            var reader = new FileReader();
+            reader.onload = function( e ) {
+                $( '#company_logo_preview' ).css( 'background-image', 'url(' + e.target.result + ')' ).show();
+            };
+            reader.readAsDataURL( file );
+        }
+    } );
+
+    $( document ).on( 'input', '#mailing_postcode, #company_postcode', function(){
+        var val = $( this ).val().replace(/[^0-9-]/g, '').slice(0,10);
+        $( this ).val( val );
+    });
 
     var $default = $( '.lucd-nav-button[data-section="overview"]' ).closest( '.lucd-nav-item' );
     if ( $default.length ) {

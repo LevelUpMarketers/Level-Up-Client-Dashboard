@@ -78,6 +78,17 @@
     color: #17a2b8;
 }
 
+.lucd-logo-preview {
+    width:150px;
+    height:150px;
+    margin-top:10px;
+    display:none;
+    background-size:contain;
+    background-repeat:no-repeat;
+    background-position:center;
+    border:1px solid #dcdcde;
+}
+
 @media (max-width: 768px) {
     .lucd-dashboard {
         display: block;

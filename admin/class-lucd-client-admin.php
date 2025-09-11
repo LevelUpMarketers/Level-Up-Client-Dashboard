@@ -57,40 +57,6 @@ class LUC_Client_Admin {
         Level_Up_Client_Dashboard_Admin::render_management_page( __( 'Client Management', 'level-up-client-dashboard' ), self::MENU_SLUG, $tabs );
     }
 
-    /**
-     * Get definitions for client fields.
-     *
-     * @return array
-     */
-    private static function get_client_fields() {
-        return array(
-            'first_name'       => array( 'label' => __( 'First Name', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'last_name'        => array( 'label' => __( 'Last Name', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'email'            => array( 'label' => __( 'Email', 'level-up-client-dashboard' ), 'type' => 'email' ),
-            'mailing_address1' => array( 'label' => __( 'Mailing Address 1', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'mailing_address2' => array( 'label' => __( 'Mailing Address 2', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'mailing_city'     => array( 'label' => __( 'Mailing City', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'mailing_state'    => array( 'label' => __( 'Mailing State', 'level-up-client-dashboard' ), 'type' => 'select', 'options' => LUC_D_Helpers::get_us_states() ),
-            'mailing_postcode' => array( 'label' => __( 'Mailing Postcode', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'mailing_country'  => array( 'label' => __( 'Mailing Country', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_name'     => array( 'label' => __( 'Company Name', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_website'  => array( 'label' => __( 'Company Website', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'company_address1' => array( 'label' => __( 'Company Address 1', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_address2' => array( 'label' => __( 'Company Address 2', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_city'     => array( 'label' => __( 'Company City', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_state'    => array( 'label' => __( 'Company State', 'level-up-client-dashboard' ), 'type' => 'select', 'options' => LUC_D_Helpers::get_us_states() ),
-            'company_postcode' => array( 'label' => __( 'Company Postcode', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'company_country'  => array( 'label' => __( 'Company Country', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'social_facebook'  => array( 'label' => __( 'Facebook', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'social_twitter'   => array( 'label' => __( 'Twitter', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'social_instagram' => array( 'label' => __( 'Instagram', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'social_linkedin'  => array( 'label' => __( 'LinkedIn', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'social_yelp'      => array( 'label' => __( 'Yelp', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'social_bbb'       => array( 'label' => __( 'BBB', 'level-up-client-dashboard' ), 'type' => 'url' ),
-            'client_since'     => array( 'label' => __( 'Client Since', 'level-up-client-dashboard' ), 'type' => 'date' ),
-            'company_logo'     => array( 'label' => __( 'Company Logo', 'level-up-client-dashboard' ), 'type' => 'hidden' ),
-        );
-    }
 
     /**
      * Render client fields.
@@ -98,7 +64,7 @@ class LUC_Client_Admin {
      * @param array $client Client data.
      */
     public static function render_client_fields( $client = array() ) {
-        foreach ( self::get_client_fields() as $field => $data ) {
+        foreach ( LUC_D_Helpers::get_client_fields() as $field => $data ) {
             $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
 
             if ( 'company_logo' === $field ) {
@@ -180,15 +146,6 @@ class LUC_Client_Admin {
         return true;
     }
 
-    /**
-     * Validate U.S. ZIP code format.
-     *
-     * @param string $postcode Postal code to validate.
-     * @return bool
-     */
-    private static function is_valid_zip( $postcode ) {
-        return (bool) preg_match( '/^\d{5}(?:-\d{4})?$/', $postcode );
-    }
 
     /**
      * Handle AJAX request to add a client.
@@ -200,7 +157,7 @@ class LUC_Client_Admin {
             wp_send_json_error( __( 'Permission denied.', 'level-up-client-dashboard' ) );
         }
 
-        $fields  = self::get_client_fields();
+        $fields  = LUC_D_Helpers::get_client_fields();
         $data    = array();
         $formats = array();
         foreach ( $fields as $field => $info ) {
@@ -229,7 +186,7 @@ class LUC_Client_Admin {
                 wp_send_json_error( __( 'Client Since must be a valid date (YYYY-MM-DD).', 'level-up-client-dashboard' ) );
             }
 
-            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! self::is_valid_zip( $value ) ) {
+            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! LUC_D_Helpers::is_valid_zip( $value ) ) {
                 wp_send_json_error( sprintf( __( '%s must be a valid U.S. ZIP code.', 'level-up-client-dashboard' ), $info['label'] ) );
             }
 
@@ -344,7 +301,7 @@ class LUC_Client_Admin {
             wp_send_json_error( __( 'Invalid client ID.', 'level-up-client-dashboard' ) );
         }
 
-        $fields  = self::get_client_fields();
+        $fields  = LUC_D_Helpers::get_client_fields();
         $data    = array();
         $formats = array();
         foreach ( $fields as $field => $info ) {
@@ -373,7 +330,7 @@ class LUC_Client_Admin {
                 wp_send_json_error( __( 'Client Since must be a valid date (YYYY-MM-DD).', 'level-up-client-dashboard' ) );
             }
 
-            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! self::is_valid_zip( $value ) ) {
+            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! LUC_D_Helpers::is_valid_zip( $value ) ) {
                 wp_send_json_error( sprintf( __( '%s must be a valid U.S. ZIP code.', 'level-up-client-dashboard' ), $info['label'] ) );
             }
 
