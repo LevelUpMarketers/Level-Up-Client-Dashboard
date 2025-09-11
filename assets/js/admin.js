@@ -61,12 +61,6 @@ jQuery(function($){
         });
     }
 
-    function initStatusFields($context){
-        $context.find('.lucd-status-select').each(function(){
-            $(this).trigger('change');
-        });
-    }
-
     $(document).on('click', '.lucd-accordion-header', function(){
         var $header = $(this);
         var $content = $header.next('.lucd-accordion-content');
@@ -94,7 +88,6 @@ jQuery(function($){
                 $content.html(response.data).data('loaded', true);
                 setupClientAutocomplete($content);
                 formatCurrencyFields($content);
-                initStatusFields($content);
             } else {
                 $content.html('<p>'+response.data+'</p>');
             }
@@ -304,11 +297,6 @@ jQuery(function($){
         formatCurrencyInput($(this));
     });
 
-    $(document).on('change', '.lucd-status-select', function(){
-        var val = $(this).val();
-        $(this).closest('.lucd-field').find('textarea').val(val);
-    });
-
     function updateTicketDuration($form){
         var start = $form.find('.lucd-ticket-start').val();
         var end = $form.find('.lucd-ticket-end').val();
@@ -327,5 +315,4 @@ jQuery(function($){
     setupClientAutocomplete($('#lucd-add-project-form'));
     setupClientAutocomplete($('#lucd-add-ticket-form'));
     formatCurrencyFields($('#lucd-add-project-form'));
-    initStatusFields($('#lucd-add-project-form'));
 });
