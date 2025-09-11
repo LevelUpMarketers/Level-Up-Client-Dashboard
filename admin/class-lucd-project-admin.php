@@ -87,9 +87,9 @@ class LUC_Project_Admin {
             'start_date'           => array( 'label' => __( 'Start Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
             'end_date'             => array( 'label' => __( 'End Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
             'status'               => array(
-                'label'          => __( 'Status', 'level-up-client-dashboard' ),
-                'type'           => 'textarea',
-                'select_options' => array(
+                'label'    => __( 'Status', 'level-up-client-dashboard' ),
+                'type'     => 'text',
+                'datalist' => array(
                     __( 'Not Started', 'level-up-client-dashboard' ),
                     __( 'In Progress', 'level-up-client-dashboard' ),
                     __( 'Completed', 'level-up-client-dashboard' ),
@@ -145,15 +145,6 @@ class LUC_Project_Admin {
             if ( isset( $data['label'] ) ) {
                 echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
             }
-            if ( isset( $data['select_options'] ) ) {
-                echo '<select class="lucd-status-select">';
-                foreach ( $data['select_options'] as $option ) {
-                    $selected = $option === $value ? ' selected="selected"' : '';
-                    echo '<option value="' . esc_attr( $option ) . '"' . $selected . '>' . esc_html( $option ) . '</option>';
-                }
-                echo '</select>';
-            }
-
             if ( 'textarea' === $data['type'] ) {
                 printf( '<textarea id="%1$s" name="%1$s"%3$s>%2$s</textarea>', esc_attr( $field ), esc_textarea( $value ), $class ? ' class="' . esc_attr( trim( $class ) ) . '"' : '' );
             } else {
