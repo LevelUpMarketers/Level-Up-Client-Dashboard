@@ -19,7 +19,9 @@ class LUC_Dashboard_Frontend {
     public static function init() {
         add_shortcode( 'lucd_client_dashboard', array( __CLASS__, 'render_dashboard' ) );
         add_action( 'wp_ajax_lucd_load_section', array( __CLASS__, 'load_section' ) );
+        add_action( 'wp_ajax_nopriv_lucd_load_section', array( __CLASS__, 'load_section' ) );
         add_action( 'wp_ajax_lucd_save_profile', array( __CLASS__, 'save_profile' ) );
+        add_action( 'wp_ajax_nopriv_lucd_save_profile', array( __CLASS__, 'save_profile' ) );
     }
 
     /**
