@@ -34,6 +34,11 @@ jQuery(function($){
         });
     });
 
+    $(document).on('input', '#mailing_postcode, #company_postcode', function(){
+        var val = $(this).val().replace(/[^0-9-]/g, '').slice(0,10);
+        $(this).val(val);
+    });
+
     var clientLabels = [], clientMap = {};
     if(lucdAdmin.clients){
         $.each(lucdAdmin.clients, function(i, client){

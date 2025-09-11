@@ -113,13 +113,19 @@ class LUC_Client_Admin {
                 continue;
             }
 
+            $extra_attr = '';
+            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) ) {
+                $extra_attr = ' pattern="\\d{5}(?:-\\d{4})?" maxlength="10"';
+            }
+
             echo '<div class="lucd-field">';
             echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
             printf(
-                '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s" />',
+                '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s"%4$s />',
                 esc_attr( $data['type'] ),
                 esc_attr( $field ),
-                esc_attr( $value )
+                esc_attr( $value ),
+                $extra_attr
             );
             echo '</div>';
 
@@ -155,6 +161,16 @@ class LUC_Client_Admin {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Validate U.S. ZIP code format.
+     *
+     * @param string $postcode Postal code to validate.
+     * @return bool
+     */
+    private static function is_valid_zip( $postcode ) {
+        return (bool) preg_match( '/^\d{5}(?:-\d{4})?$/', $postcode );
     }
 
     /**
@@ -194,6 +210,10 @@ class LUC_Client_Admin {
 
             if ( 'client_since' === $field && $value && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
                 wp_send_json_error( __( 'Client Since must be a valid date (YYYY-MM-DD).', 'level-up-client-dashboard' ) );
+            }
+
+            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! self::is_valid_zip( $value ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid U.S. ZIP code.', 'level-up-client-dashboard' ), $info['label'] ) );
             }
         }
 
@@ -330,6 +350,10 @@ class LUC_Client_Admin {
 
             if ( 'client_since' === $field && $value && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
                 wp_send_json_error( __( 'Client Since must be a valid date (YYYY-MM-DD).', 'level-up-client-dashboard' ) );
+            }
+
+            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) && $value && ! self::is_valid_zip( $value ) ) {
+                wp_send_json_error( sprintf( __( '%s must be a valid U.S. ZIP code.', 'level-up-client-dashboard' ), $info['label'] ) );
             }
         }
 
