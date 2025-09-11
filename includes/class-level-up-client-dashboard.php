@@ -45,6 +45,9 @@ class Level_Up_Client_Dashboard {
             LUC_Billing_Admin::init();
             LUC_Plugin_Admin::init();
         }
+
+        require_once LUCD_PLUGIN_DIR . 'includes/class-lucd-frontend.php';
+        LUC_Dashboard_Frontend::init();
     }
 
     /**
@@ -128,6 +131,7 @@ class Level_Up_Client_Dashboard {
             company_state varchar(100) DEFAULT '' NOT NULL,
             company_postcode varchar(20) DEFAULT '' NOT NULL,
             company_country varchar(100) DEFAULT '' NOT NULL,
+            company_logo bigint(20) unsigned NOT NULL DEFAULT 0,
             social_facebook varchar(255) DEFAULT '' NOT NULL,
             social_twitter varchar(255) DEFAULT '' NOT NULL,
             social_instagram varchar(255) DEFAULT '' NOT NULL,
