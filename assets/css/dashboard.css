@@ -1,0 +1,43 @@
+.lucd-dashboard {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.lucd-dashboard .lucd-nav {
+    flex: 0 0 25%;
+    max-width: 25%;
+}
+
+.lucd-dashboard .lucd-nav-button {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.lucd-dashboard .lucd-content {
+    flex: 1;
+    padding-left: 20px;
+}
+
+.lucd-mobile-content {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .lucd-dashboard {
+        display: block;
+    }
+
+    .lucd-dashboard .lucd-nav {
+        max-width: 100%;
+    }
+
+    .lucd-dashboard .lucd-content {
+        display: none;
+    }
+
+    .lucd-mobile-content {
+        display: none;
+        padding: 10px 0;
+    }
+}

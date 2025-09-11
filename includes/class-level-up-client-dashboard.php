@@ -44,6 +44,9 @@ class Level_Up_Client_Dashboard {
             LUC_Support_Admin::init();
             LUC_Billing_Admin::init();
             LUC_Plugin_Admin::init();
+        } else {
+            require_once LUCD_PLUGIN_DIR . 'includes/class-lucd-frontend.php';
+            LUC_Dashboard_Frontend::init();
         }
     }
 
