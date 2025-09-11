@@ -34,6 +34,12 @@ jQuery( function( $ ) {
         loadSection( section, $item );
     } );
 
+    $( document ).on( 'click', '.lucd-card', function() {
+        var section = $( this ).data( 'section' );
+        var $navItem = $( '.lucd-nav-button[data-section="' + section + '"]' ).closest( '.lucd-nav-item' );
+        loadSection( section, $navItem );
+    } );
+
     $( document ).on( 'click', '.lucd-edit-profile', function() {
         var $view = $( this ).closest( '.lucd-profile-view' );
         $view.hide();
@@ -61,4 +67,9 @@ jQuery( function( $ ) {
             }
         } );
     } );
+
+    var $default = $( '.lucd-nav-button[data-section="overview"]' ).closest( '.lucd-nav-item' );
+    if ( $default.length ) {
+        loadSection( 'overview', $default );
+    }
 } );

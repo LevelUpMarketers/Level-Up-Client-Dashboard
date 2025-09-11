@@ -2,5 +2,5 @@
 
 ## Shortcodes
 
-- `[lucd_client_dashboard]` Display the front-end client dashboard for logged-in users.
+- `[lucd_client_dashboard]` Display the front-end client dashboard. Logged-out visitors see a login form, while logged-in clients receive an overview with status cards and AJAX-driven sections.
 

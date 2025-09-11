@@ -23,6 +23,61 @@
     display: none;
 }
 
+.lucd-info-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    background: #f5f5f5;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+.lucd-info-bar > div {
+    flex: 1;
+}
+
+.lucd-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.lucd-card {
+    flex: 1 1 calc(50% - 20px);
+    border: 1px solid #ddd;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.lucd-card-good {
+    border-color: #28a745;
+}
+
+.lucd-card-attention {
+    border-color: #ffc107;
+}
+
+.lucd-card-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.lucd-icon-check::before {
+    content: '\2713';
+    color: #28a745;
+}
+
+.lucd-icon-warning::before {
+    content: '\26A0';
+    color: #ffc107;
+}
+
+.lucd-icon-info::before {
+    content: '\2139';
+    color: #17a2b8;
+}
+
 @media (max-width: 768px) {
     .lucd-dashboard {
         display: block;
@@ -39,5 +94,9 @@
     .lucd-mobile-content {
         display: none;
         padding: 10px 0;
+    }
+
+    .lucd-card {
+        flex: 1 1 100%;
     }
 }

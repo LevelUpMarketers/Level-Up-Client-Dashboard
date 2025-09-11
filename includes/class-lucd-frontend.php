@@ -30,11 +30,9 @@ class LUC_Dashboard_Frontend {
      * @return string
      */
     public static function render_dashboard() {
-        if ( ! is_user_logged_in() ) {
-            return '<p>' . esc_html__( 'You must be logged in to view this page.', 'lucd' ) . '</p>';
-        }
-
         self::enqueue_assets();
+
+        $logged_in = is_user_logged_in();
 
         $buttons = array(
             'overview' => __( 'Overview', 'lucd' ),
@@ -51,12 +49,18 @@ class LUC_Dashboard_Frontend {
             <div class="lucd-nav">
                 <?php foreach ( $buttons as $key => $label ) : ?>
                     <div class="lucd-nav-item">
-                        <button class="lucd-nav-button" data-section="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></button>
+                        <button type="button" class="lucd-nav-button" data-section="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></button>
                         <div class="lucd-mobile-content"></div>
                     </div>
                 <?php endforeach; ?>
             </div>
-            <div id="lucd-content" class="lucd-content"></div>
+            <div id="lucd-content" class="lucd-content">
+                <?php
+                if ( ! $logged_in ) {
+                    wp_login_form();
+                }
+                ?>
+            </div>
         </div>
         <?php
         return ob_get_clean();
@@ -73,22 +77,24 @@ class LUC_Dashboard_Frontend {
             '0.1.0'
         );
 
-        wp_enqueue_script(
-            'lucd-dashboard',
-            plugins_url( 'assets/js/dashboard.js', LUCD_PLUGIN_FILE ),
-            array( 'jquery' ),
-            '0.1.0',
-            true
-        );
+        if ( is_user_logged_in() ) {
+            wp_enqueue_script(
+                'lucd-dashboard',
+                plugins_url( 'assets/js/dashboard.js', LUCD_PLUGIN_FILE ),
+                array( 'jquery' ),
+                '0.1.0',
+                true
+            );
 
-        wp_localize_script(
-            'lucd-dashboard',
-            'lucdDashboard',
-            array(
-                'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-                'nonce'   => wp_create_nonce( 'lucd_dashboard_nonce' ),
-            )
-        );
+            wp_localize_script(
+                'lucd-dashboard',
+                'lucdDashboard',
+                array(
+                    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+                    'nonce'   => wp_create_nonce( 'lucd_dashboard_nonce' ),
+                )
+            );
+        }
     }
 
     /**
@@ -109,7 +115,7 @@ class LUC_Dashboard_Frontend {
                 $content = self::get_profile_section( $user_id );
                 break;
             case 'overview':
-                $content = '<p>' . esc_html__( 'Welcome to your dashboard.', 'lucd' ) . '</p>';
+                $content = self::get_overview_section( $user_id );
                 break;
             case 'projects':
                 $content = '<p>' . esc_html__( 'Projects & Services coming soon.', 'lucd' ) . '</p>';
@@ -128,6 +134,88 @@ class LUC_Dashboard_Frontend {
         }
 
         wp_send_json_success( $content );
+    }
+
+    /**
+     * Build overview section markup.
+     *
+     * @param int $user_id Current user ID.
+     * @return string
+     */
+    private static function get_overview_section( $user_id ) {
+        global $wpdb;
+
+        $clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+        $projects_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_table() );
+        $tickets_table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
+        $plugins_table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::plugins_table() );
+
+        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+        if ( ! $client ) {
+            return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
+        }
+
+        $client_id      = (int) $client['client_id'];
+        $projects_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$projects_table} WHERE client_id = %d", $client_id ) );
+        $plugins_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$plugins_table} WHERE client_id = %d", $client_id ) );
+        $tickets_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$tickets_table} WHERE client_id = %d", $client_id ) );
+
+        $required_fields   = array( 'first_name', 'last_name', 'email', 'mailing_address1', 'mailing_city', 'mailing_state', 'mailing_postcode', 'mailing_country' );
+        $profile_complete = true;
+        foreach ( $required_fields as $field ) {
+            if ( empty( $client[ $field ] ) ) {
+                $profile_complete = false;
+                break;
+            }
+        }
+
+        $projects_needing_attention = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$projects_table} WHERE client_id = %d AND status NOT IN ('Completed','Cancelled')", $client_id ) );
+        $tickets_needing_attention  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$tickets_table} WHERE client_id = %d AND status NOT IN ('Completed','No Longer Applicable')", $client_id ) );
+
+        ob_start();
+        ?>
+        <div class="lucd-overview">
+            <div class="lucd-info-bar">
+                <div><?php printf( esc_html__( 'Client for %s', 'lucd' ), esc_html( human_time_diff( strtotime( $client['client_since'] ), current_time( 'timestamp' ) ) ) ); ?></div>
+                <div><?php printf( esc_html__( '%d Projects & Services', 'lucd' ), $projects_count ); ?></div>
+                <div><?php printf( esc_html__( '%d Plugins', 'lucd' ), $plugins_count ); ?></div>
+                <div><?php printf( esc_html__( '%d Support Tickets', 'lucd' ), $tickets_count ); ?></div>
+            </div>
+            <div class="lucd-cards">
+                <?php self::render_card( 'profile', __( 'Profile Info', 'lucd' ), $profile_complete, $profile_complete ? __( 'All Good!', 'lucd' ) : __( 'Your profile info needs attention!', 'lucd' ), $profile_complete ? 'check' : 'warning' ); ?>
+                <?php self::render_card( 'projects', __( 'Projects & Services', 'lucd' ), ! $projects_needing_attention, $projects_needing_attention ? __( 'A project or service needs your attention!', 'lucd' ) : sprintf( __( 'Your %d Projects & Services are all good to go!', 'lucd' ), $projects_count ), $projects_needing_attention ? 'warning' : 'check' ); ?>
+                <?php self::render_card( 'tickets', __( 'Support Tickets', 'lucd' ), ! $tickets_needing_attention, $tickets_needing_attention ? __( 'A support ticket needs your attention!', 'lucd' ) : __( 'Your support tickets are all resolved!', 'lucd' ), $tickets_needing_attention ? 'warning' : 'check' ); ?>
+                <?php self::render_card( 'plugins', __( 'Your Plugins', 'lucd' ), null, __( 'Coming soon', 'lucd' ), 'info' ); ?>
+                <?php self::render_card( 'billing', __( 'Billing', 'lucd' ), null, __( 'Coming soon', 'lucd' ), 'info' ); ?>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Output a dashboard card.
+     *
+     * @param string $section Section identifier.
+     * @param string $title   Card title.
+     * @param bool|null $good Whether the card shows a good state. Null for neutral.
+     * @param string $message Message displayed under the icon.
+     * @param string $icon    Icon type (check|warning|info).
+     */
+    private static function render_card( $section, $title, $good, $message, $icon ) {
+        $status_class = '';
+        if ( true === $good ) {
+            $status_class = 'lucd-card-good';
+        } elseif ( false === $good ) {
+            $status_class = 'lucd-card-attention';
+        }
+        ?>
+        <div class="lucd-card <?php echo esc_attr( $status_class ); ?>" data-section="<?php echo esc_attr( $section ); ?>">
+            <h3><?php echo esc_html( $title ); ?></h3>
+            <div class="lucd-card-icon lucd-icon-<?php echo esc_attr( $icon ); ?>"></div>
+            <p class="lucd-card-message"><?php echo esc_html( $message ); ?></p>
+        </div>
+        <?php
     }
 
     /**
