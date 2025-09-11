@@ -86,6 +86,10 @@ jQuery( function( $ ) {
         }
     } );
 
+    $( document ).on( 'click', '.lucd-accordion-header', function() {
+        $( this ).next( '.lucd-accordion-content' ).slideToggle();
+    } );
+
     $( document ).on( 'input', '#mailing_postcode, #company_postcode', function(){
         var val = $( this ).val().replace(/[^0-9-]/g, '').slice(0,10);
         $( this ).val( val );

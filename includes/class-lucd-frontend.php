@@ -138,7 +138,7 @@ class LUC_Dashboard_Frontend {
                 $content = self::get_overview_section( $user_id );
                 break;
             case 'projects':
-                $content = '<p>' . esc_html__( 'Projects & Services coming soon.', 'lucd' ) . '</p>';
+                $content = self::get_projects_section( $user_id );
                 break;
             case 'tickets':
                 $content = '<p>' . esc_html__( 'Support Tickets coming soon.', 'lucd' ) . '</p>';
@@ -239,6 +239,58 @@ class LUC_Dashboard_Frontend {
     }
 
     /**
+     * Build Projects & Services section markup.
+     *
+     * @param int $user_id Current user ID.
+     * @return string
+     */
+    private static function get_projects_section( $user_id ) {
+        global $wpdb;
+
+        $clients_table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+        $projects_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_table() );
+
+        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+        if ( ! $client ) {
+            return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
+        }
+
+        $projects = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$projects_table} WHERE client_id = %d", (int) $client['client_id'] ), ARRAY_A );
+        if ( empty( $projects ) ) {
+            return '<p>' . esc_html__( 'No projects found.', 'lucd' ) . '</p>';
+        }
+
+        $fields = LUC_D_Helpers::get_project_fields();
+
+        $client_label = $client['company_name'] ? $client['company_name'] : trim( $client['first_name'] . ' ' . $client['last_name'] );
+
+        ob_start();
+        foreach ( $projects as $project ) {
+            $project['project_client'] = $client_label;
+            echo '<div class="lucd-accordion">';
+            echo '<h3 class="lucd-accordion-header">' . esc_html( $project['project_name'] ) . '</h3>';
+            echo '<div class="lucd-accordion-content">';
+            foreach ( $fields as $field => $info ) {
+                if ( in_array( $field, array( 'client_id', 'project_name' ), true ) || 'hidden' === $info['type'] ) {
+                    continue;
+                }
+                $value = isset( $project[ $field ] ) ? $project[ $field ] : '';
+                echo '<div class="lucd-field">';
+                echo '<label>' . esc_html( $info['label'] ) . '</label>';
+                if ( 'url' === $info['type'] && $value ) {
+                    echo '<a href="' . esc_url( $value ) . '" target="_blank" rel="noopener">' . esc_html( $value ) . '</a>';
+                } else {
+                    echo '<div class="lucd-field-value">' . nl2br( esc_html( $value ) ) . '</div>';
+                }
+                echo '</div>';
+            }
+            echo '</div>';
+            echo '</div>';
+        }
+        return ob_get_clean();
+    }
+
+    /**
      * Get profile information markup for the current user.
      *
      * @param int $user_id WordPress user ID.
@@ -264,7 +316,10 @@ class LUC_Dashboard_Frontend {
         ?>
         <div class="lucd-profile-view">
             <?php if ( $logo_url ) : ?>
-                <div class="lucd-logo-preview" style="background-image:url(<?php echo esc_url( $logo_url ); ?>);display:block;"></div>
+                <div class="lucd-field">
+                    <label><?php esc_html_e( 'Company Logo', 'lucd' ); ?></label>
+                    <div class="lucd-logo-preview" style="background-image:url(<?php echo esc_url( $logo_url ); ?>);display:block;"></div>
+                </div>
             <?php endif; ?>
             <?php foreach ( $fields as $field => $info ) : ?>
                 <?php
@@ -277,9 +332,12 @@ class LUC_Dashboard_Frontend {
                     $value  = isset( $states[ $value ] ) ? $states[ $value ] : $value;
                 }
                 ?>
-                <p><strong><?php echo esc_html( $info['label'] ); ?>:</strong> <?php echo esc_html( $value ); ?></p>
+                <div class="lucd-field">
+                    <label><?php echo esc_html( $info['label'] ); ?></label>
+                    <div class="lucd-field-value"><?php echo esc_html( $value ); ?></div>
+                </div>
             <?php endforeach; ?>
-            <button class="lucd-edit-profile"><?php esc_html_e( 'Edit Profile Info', 'lucd' ); ?></button>
+            <p><button class="lucd-edit-profile"><?php esc_html_e( 'Edit Profile Info', 'lucd' ); ?></button></p>
         </div>
         <form class="lucd-profile-edit" style="display:none;" enctype="multipart/form-data">
             <input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'lucd_save_profile' ) ); ?>" />
@@ -290,10 +348,10 @@ class LUC_Dashboard_Frontend {
                 }
                 $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
                 ?>
-                <p>
-                    <label><?php echo esc_html( $info['label'] ); ?><br />
+                <div class="lucd-field">
+                    <label for="<?php echo esc_attr( $field ); ?>"><?php echo esc_html( $info['label'] ); ?></label>
                     <?php if ( 'select' === $info['type'] ) : ?>
-                        <select name="<?php echo esc_attr( $field ); ?>">
+                        <select id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>">
                             <option value="" disabled <?php selected( '', $value ); ?>><?php esc_html_e( 'Choose a State...', 'lucd' ); ?></option>
                             <?php foreach ( $info['options'] as $abbr => $name ) : ?>
                                 <option value="<?php echo esc_attr( $abbr ); ?>" <?php selected( $value, $abbr ); ?>><?php echo esc_html( $name ); ?></option>
@@ -309,10 +367,9 @@ class LUC_Dashboard_Frontend {
                             $extra = ' pattern="\\d{5}(?:-\\d{4})?" maxlength="10"';
                         }
                         ?>
-                        <input type="<?php echo esc_attr( $info['type'] ); ?>" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $value ); ?>"<?php echo $extra; ?> />
+                        <input type="<?php echo esc_attr( $info['type'] ); ?>" id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $value ); ?>"<?php echo $extra; ?> />
                     <?php endif; ?>
-                    </label>
-                </p>
+                </div>
             <?php endforeach; ?>
             <p>
                 <button type="submit"><?php esc_html_e( 'Save', 'lucd' ); ?></button>
