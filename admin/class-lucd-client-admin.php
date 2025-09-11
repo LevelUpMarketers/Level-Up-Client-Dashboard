@@ -108,6 +108,13 @@ class LUC_Client_Admin {
                 esc_attr( $value )
             );
             echo '</div>';
+
+            if ( 'email' === $field ) {
+                echo '<div class="lucd-field">';
+                echo '<label for="password">' . esc_html__( 'Password', 'level-up-client-dashboard' ) . '</label>';
+                echo '<input type="password" id="password" name="password" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{8,}" autocomplete="new-password" />';
+                echo '</div>';
+            }
         }
     }
 
@@ -224,10 +231,6 @@ class LUC_Client_Admin {
         ob_start();
         echo '<form class="lucd-edit-client-form">';
         self::render_client_fields( $client );
-        echo '<div class="lucd-field">';
-        echo '<label for="password">' . esc_html__( 'Password', 'level-up-client-dashboard' ) . '</label>';
-        echo '<input type="password" id="password" name="password" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{8,}" autocomplete="new-password" />';
-        echo '</div>';
         echo '<input type="hidden" name="action" value="lucd_update_client" />';
         echo '<input type="hidden" name="client_id" value="' . esc_attr( $client_id ) . '" />';
         wp_nonce_field( 'lucd_update_client', 'lucd_update_nonce' );
