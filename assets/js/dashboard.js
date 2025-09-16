@@ -47,7 +47,7 @@ jQuery( function( $ ) {
 
             if ( element.scrollWidth > Math.ceil( $value.innerWidth() ) ) {
                 $value.addClass( 'lucd-truncated' ).attr( 'aria-label', fullText );
-            } elseif ( wasTrunc ) {
+            } else if ( wasTrunc ) {
                 hideTooltip();
             }
         } );
