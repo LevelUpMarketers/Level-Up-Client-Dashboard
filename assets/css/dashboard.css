@@ -56,6 +56,44 @@
     border: solid 1px #ddd;
 }
 
+.lucd-profile-view .lucd-field-value {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lucd-profile-view .lucd-field-value.lucd-truncated {
+    cursor: help;
+}
+
+.lucd-profile-view .lucd-field-value a {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: inherit;
+    text-decoration: underline;
+    color: inherit;
+}
+
+.lucd-tooltip {
+    position: absolute;
+    z-index: 10000;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+    max-width: 320px;
+    pointer-events: none;
+    display: none;
+    white-space: normal;
+    word-break: break-word;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
 .lucd-field {
     display: inline-block;
     margin: 0 40px 40px 0;
