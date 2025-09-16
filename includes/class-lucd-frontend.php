@@ -180,7 +180,7 @@ class LUC_Dashboard_Frontend {
         $plugins_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$plugins_table} WHERE client_id = %d", $client_id ) );
         $tickets_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$tickets_table} WHERE client_id = %d", $client_id ) );
 
-        $required_fields   = array( 'first_name', 'last_name', 'email', 'mailing_address1', 'mailing_city', 'mailing_state', 'mailing_postcode', 'mailing_country' );
+        $required_fields   = array( 'first_name', 'last_name', 'email', 'mailing_address1', 'mailing_city', 'mailing_state', 'mailing_postcode' );
         $profile_complete = true;
         foreach ( $required_fields as $field ) {
             if ( empty( $client[ $field ] ) ) {
@@ -313,17 +313,12 @@ class LUC_Dashboard_Frontend {
         if ( ! empty( $client['company_logo'] ) ) {
             $logo_url = wp_get_attachment_image_url( (int) $client['company_logo'], 'full' );
         }
+        $na_text = __( 'N/A', 'lucd' );
         ?>
         <div class="lucd-profile-view">
-            <?php if ( $logo_url ) : ?>
-                <div class="lucd-field">
-                    <label><?php esc_html_e( 'Company Logo', 'lucd' ); ?></label>
-                    <div class="lucd-logo-preview" style="background-image:url(<?php echo esc_url( $logo_url ); ?>);display:block;"></div>
-                </div>
-            <?php endif; ?>
             <?php foreach ( $fields as $field => $info ) : ?>
                 <?php
-                if ( 'client_since' === $field || 'company_logo' === $field ) {
+                if ( in_array( $field, array( 'client_since', 'company_logo', 'mailing_country', 'company_country' ), true ) ) {
                     continue;
                 }
                 $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
@@ -331,11 +326,37 @@ class LUC_Dashboard_Frontend {
                     $states = LUC_D_Helpers::get_us_states();
                     $value  = isset( $states[ $value ] ) ? $states[ $value ] : $value;
                 }
+                $has_value = '' !== trim( (string) $value );
                 ?>
                 <div class="lucd-field">
                     <label><?php echo esc_html( $info['label'] ); ?></label>
-                    <div class="lucd-field-value"><?php echo esc_html( $value ); ?></div>
+                    <div class="lucd-field-value" data-full-text="<?php echo esc_attr( $has_value ? $value : '' ); ?>">
+                        <?php
+                        if ( $has_value && 'company_website' === $field ) {
+                            $url = esc_url( $value );
+                            if ( $url ) {
+                                echo '<a href="' . $url . '" target="_blank" rel="noopener">' . esc_html( $value ) . '</a>';
+                            } else {
+                                echo esc_html( $value );
+                            }
+                        } elseif ( $has_value ) {
+                            echo esc_html( $value );
+                        } else {
+                            echo esc_html( $na_text );
+                        }
+                        ?>
+                    </div>
                 </div>
+                <?php if ( 'social_bbb' === $field ) : ?>
+                    <div class="lucd-field lucd-field-logo">
+                        <label><?php esc_html_e( 'Company Logo', 'lucd' ); ?></label>
+                        <?php if ( $logo_url ) : ?>
+                            <div class="lucd-logo-preview" style="background-image:url(<?php echo esc_url( $logo_url ); ?>);display:block;"></div>
+                        <?php else : ?>
+                            <div class="lucd-field-value" data-full-text=""><?php echo esc_html( $na_text ); ?></div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             <?php endforeach; ?>
             <p><button class="lucd-edit-profile"><?php esc_html_e( 'Edit Profile Info', 'lucd' ); ?></button></p>
         </div>
@@ -343,7 +364,7 @@ class LUC_Dashboard_Frontend {
             <input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'lucd_save_profile' ) ); ?>" />
             <?php foreach ( $fields as $field => $info ) : ?>
                 <?php
-                if ( 'client_since' === $field ) {
+                if ( in_array( $field, array( 'client_since', 'mailing_country', 'company_country' ), true ) ) {
                     continue;
                 }
                 $value = isset( $client[ $field ] ) ? $client[ $field ] : '';
@@ -399,7 +420,7 @@ class LUC_Dashboard_Frontend {
         $formats = array();
 
         foreach ( $fields as $field => $info ) {
-            if ( 'company_logo' === $field ) {
+            if ( in_array( $field, array( 'company_logo', 'mailing_country', 'company_country' ), true ) ) {
                 continue;
             }
 
