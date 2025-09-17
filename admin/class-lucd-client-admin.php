@@ -93,20 +93,28 @@ class LUC_Client_Admin {
                 continue;
             }
 
-            $extra_attr = '';
-            if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) ) {
-                $extra_attr = ' pattern="\\d{5}(?:-\\d{4})?" maxlength="10"';
-            }
-
             echo '<div class="lucd-field">';
             echo '<label for="' . esc_attr( $field ) . '">' . esc_html( $data['label'] ) . '</label>';
-            printf(
-                '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s"%4$s />',
-                esc_attr( $data['type'] ),
-                esc_attr( $field ),
-                esc_attr( $value ),
-                $extra_attr
-            );
+            if ( 'textarea' === $data['type'] ) {
+                printf(
+                    '<textarea id="%1$s" name="%1$s">%2$s</textarea>',
+                    esc_attr( $field ),
+                    esc_textarea( $value )
+                );
+            } else {
+                $extra_attr = '';
+                if ( in_array( $field, array( 'mailing_postcode', 'company_postcode' ), true ) ) {
+                    $extra_attr = ' pattern="\\d{5}(?:-\\d{4})?" maxlength="10"';
+                }
+
+                printf(
+                    '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s"%4$s />',
+                    esc_attr( $data['type'] ),
+                    esc_attr( $field ),
+                    esc_attr( $value ),
+                    $extra_attr
+                );
+            }
             echo '</div>';
 
             if ( 'email' === $field ) {
@@ -167,7 +175,11 @@ class LUC_Client_Admin {
                 continue;
             }
 
-            $value       = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            if ( 'textarea' === $info['type'] ) {
+                $value = isset( $_POST[ $field ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            } else {
+                $value = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            }
             $data[ $field ] = $value;
             $formats[]      = '%s';
 
@@ -311,7 +323,11 @@ class LUC_Client_Admin {
                 continue;
             }
 
-            $value       = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            if ( 'textarea' === $info['type'] ) {
+                $value = isset( $_POST[ $field ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            } else {
+                $value = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+            }
             $data[ $field ] = $value;
             $formats[]      = '%s';
 

@@ -27,6 +27,8 @@ Stores individual client records and associated company information.
 | `company_postcode` | varchar(20) | Postal or ZIP code of the company's physical address. |
 | `company_country` | varchar(100) | Country of the company's physical address. |
 | `company_logo` | bigint(20) unsigned | Attachment ID for the client's logo. |
+| `attention_needed` | text | Notes indicating items that need attention for this client. |
+| `critical_issue` | text | Notes describing any critical issues for this client. |
 | `social_facebook` | varchar(255) | URL to the company's Facebook page. |
 | `social_twitter` | varchar(255) | URL to the company's Twitter profile. |
 | `social_instagram` | varchar(255) | URL to the company's Instagram profile. |
@@ -60,6 +62,8 @@ Tracks projects associated with a client.
 | `monthly_support_time` | int unsigned | Monthly support time in minutes. |
 | `description` | text | Detailed project description. |
 | `project_updates` | longtext | Historical log of project updates. |
+| `attention_needed` | text | Notes for items that require attention on the project or service. |
+| `critical_issue` | text | Notes for critical issues on the project or service. |
 | `created_at` | datetime | Record creation timestamp. |
 | `updated_at` | datetime | Record last updated timestamp. |
 
@@ -77,6 +81,8 @@ Stores support ticket records associated with a client.
 | `status` | varchar(50) | Current ticket status. |
 | `initial_description` | text | Initial ticket description. |
 | `ticket_updates` | longtext | Ongoing ticket updates. |
+| `attention_needed` | text | Notes for items on the ticket that require attention. |
+| `critical_issue` | text | Notes for critical issues on the ticket. |
 | `created_at` | datetime | Record creation timestamp. |
 | `updated_at` | datetime | Record last updated timestamp. |
 

@@ -180,17 +180,75 @@ class LUC_Dashboard_Frontend {
         $plugins_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$plugins_table} WHERE client_id = %d", $client_id ) );
         $tickets_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$tickets_table} WHERE client_id = %d", $client_id ) );
 
-        $required_fields   = array( 'first_name', 'last_name', 'email', 'mailing_address1', 'mailing_city', 'mailing_state', 'mailing_postcode' );
-        $profile_complete = true;
-        foreach ( $required_fields as $field ) {
-            if ( empty( $client[ $field ] ) ) {
-                $profile_complete = false;
-                break;
+        $project_notes = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT project_name, attention_needed, critical_issue FROM {$projects_table} WHERE client_id = %d",
+                $client_id
+            ),
+            ARRAY_A
+        );
+
+        $ticket_notes = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT ticket_id, attention_needed, critical_issue FROM {$tickets_table} WHERE client_id = %d",
+                $client_id
+            ),
+            ARRAY_A
+        );
+
+        $profile_critical  = self::filter_notes( array( isset( $client['critical_issue'] ) ? $client['critical_issue'] : '' ) );
+        $profile_attention = self::filter_notes( array( isset( $client['attention_needed'] ) ? $client['attention_needed'] : '' ) );
+
+        $projects_critical  = array();
+        $projects_attention = array();
+        foreach ( $project_notes as $project_note ) {
+            $label = isset( $project_note['project_name'] ) ? $project_note['project_name'] : '';
+
+            $critical = self::format_labelled_note( $label, isset( $project_note['critical_issue'] ) ? $project_note['critical_issue'] : '' );
+            if ( '' !== $critical ) {
+                $projects_critical[] = $critical;
+            }
+
+            $attention = self::format_labelled_note( $label, isset( $project_note['attention_needed'] ) ? $project_note['attention_needed'] : '' );
+            if ( '' !== $attention ) {
+                $projects_attention[] = $attention;
             }
         }
 
-        $projects_needing_attention = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$projects_table} WHERE client_id = %d AND status NOT IN ('Completed','Cancelled')", $client_id ) );
-        $tickets_needing_attention  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$tickets_table} WHERE client_id = %d AND status NOT IN ('Completed','No Longer Applicable')", $client_id ) );
+        $tickets_critical  = array();
+        $tickets_attention = array();
+        foreach ( $ticket_notes as $ticket_note ) {
+            $ticket_id = isset( $ticket_note['ticket_id'] ) ? (int) $ticket_note['ticket_id'] : 0;
+            $label     = $ticket_id ? sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_id ) : __( 'Ticket', 'lucd' );
+
+            $critical = self::format_labelled_note( $label, isset( $ticket_note['critical_issue'] ) ? $ticket_note['critical_issue'] : '' );
+            if ( '' !== $critical ) {
+                $tickets_critical[] = $critical;
+            }
+
+            $attention = self::format_labelled_note( $label, isset( $ticket_note['attention_needed'] ) ? $ticket_note['attention_needed'] : '' );
+            if ( '' !== $attention ) {
+                $tickets_attention[] = $attention;
+            }
+        }
+
+        $profile_status = self::build_card_status(
+            $profile_critical,
+            $profile_attention,
+            __( 'All profile information is clear.', 'lucd' )
+        );
+
+        $projects_status = self::build_card_status(
+            $projects_critical,
+            $projects_attention,
+            $projects_count ? __( 'No projects or services currently require attention.', 'lucd' ) : __( 'No projects or services have been added yet.', 'lucd' )
+        );
+
+        $tickets_status = self::build_card_status(
+            $tickets_critical,
+            $tickets_attention,
+            $tickets_count ? __( 'No support tickets currently require attention.', 'lucd' ) : __( 'No support tickets have been opened yet.', 'lucd' )
+        );
 
         ob_start();
         ?>
@@ -202,11 +260,19 @@ class LUC_Dashboard_Frontend {
                 <div><?php printf( esc_html__( '%d Support Tickets', 'lucd' ), $tickets_count ); ?></div>
             </div>
             <div class="lucd-cards">
-                <?php self::render_card( 'profile', __( 'Profile Info', 'lucd' ), $profile_complete, $profile_complete ? __( 'All Good!', 'lucd' ) : __( 'Your profile info needs attention!', 'lucd' ), $profile_complete ? 'check' : 'warning' ); ?>
-                <?php self::render_card( 'projects', __( 'Projects & Services', 'lucd' ), ! $projects_needing_attention, $projects_needing_attention ? __( 'A project or service needs your attention!', 'lucd' ) : sprintf( __( 'Your %d Projects & Services are all good to go!', 'lucd' ), $projects_count ), $projects_needing_attention ? 'warning' : 'check' ); ?>
-                <?php self::render_card( 'tickets', __( 'Support Tickets', 'lucd' ), ! $tickets_needing_attention, $tickets_needing_attention ? __( 'A support ticket needs your attention!', 'lucd' ) : __( 'Your support tickets are all resolved!', 'lucd' ), $tickets_needing_attention ? 'warning' : 'check' ); ?>
-                <?php self::render_card( 'plugins', __( 'Your Plugins', 'lucd' ), null, __( 'Coming soon', 'lucd' ), 'info' ); ?>
-                <?php self::render_card( 'billing', __( 'Billing', 'lucd' ), null, __( 'Coming soon', 'lucd' ), 'info' ); ?>
+                <?php self::render_card( 'profile', __( 'Profile Info', 'lucd' ), $profile_status ); ?>
+                <?php self::render_card( 'projects', __( 'Projects & Services', 'lucd' ), $projects_status ); ?>
+                <?php self::render_card( 'tickets', __( 'Support Tickets', 'lucd' ), $tickets_status ); ?>
+                <?php self::render_card( 'plugins', __( 'Your Plugins', 'lucd' ), array(
+                    'class'    => '',
+                    'icon'     => 'info',
+                    'messages' => array( __( 'Coming soon', 'lucd' ) ),
+                ) ); ?>
+                <?php self::render_card( 'billing', __( 'Billing', 'lucd' ), array(
+                    'class'    => '',
+                    'icon'     => 'info',
+                    'messages' => array( __( 'Coming soon', 'lucd' ) ),
+                ) ); ?>
             </div>
         </div>
         <?php
@@ -218,24 +284,125 @@ class LUC_Dashboard_Frontend {
      *
      * @param string $section Section identifier.
      * @param string $title   Card title.
-     * @param bool|null $good Whether the card shows a good state. Null for neutral.
-     * @param string $message Message displayed under the icon.
-     * @param string $icon    Icon type (check|warning|info).
+     * @param array  $status  Status data with class, icon, and messages keys.
      */
-    private static function render_card( $section, $title, $good, $message, $icon ) {
-        $status_class = '';
-        if ( true === $good ) {
-            $status_class = 'lucd-card-good';
-        } elseif ( false === $good ) {
-            $status_class = 'lucd-card-attention';
+    private static function render_card( $section, $title, array $status ) {
+        $status_class = isset( $status['class'] ) ? (string) $status['class'] : '';
+        $icon         = isset( $status['icon'] ) ? (string) $status['icon'] : 'info';
+        $messages     = array();
+
+        if ( ! empty( $status['messages'] ) && is_array( $status['messages'] ) ) {
+            foreach ( $status['messages'] as $message ) {
+                $normalized = self::normalize_note( $message );
+                if ( '' !== $normalized ) {
+                    $messages[] = $normalized;
+                }
+            }
+        }
+
+        if ( empty( $messages ) ) {
+            $messages[] = '';
         }
         ?>
         <div class="lucd-card <?php echo esc_attr( $status_class ); ?>" data-section="<?php echo esc_attr( $section ); ?>">
             <h3><?php echo esc_html( $title ); ?></h3>
             <div class="lucd-card-icon lucd-icon-<?php echo esc_attr( $icon ); ?>"></div>
-            <p class="lucd-card-message"><?php echo esc_html( $message ); ?></p>
+            <div class="lucd-card-messages">
+                <?php foreach ( $messages as $message ) : ?>
+                    <p class="lucd-card-message"><?php echo nl2br( esc_html( $message ) ); ?></p>
+                <?php endforeach; ?>
+            </div>
         </div>
         <?php
+    }
+
+    /**
+     * Prepare the card status data based on attention and critical notes.
+     *
+     * @param array  $critical_notes  Critical issue notes.
+     * @param array  $attention_notes Attention needed notes.
+     * @param string $default_message Default message when no notes are present.
+     * @return array
+     */
+    private static function build_card_status( array $critical_notes, array $attention_notes, $default_message ) {
+        $critical  = self::filter_notes( $critical_notes );
+        $attention = self::filter_notes( $attention_notes );
+
+        if ( ! empty( $critical ) ) {
+            return array(
+                'class'    => 'lucd-card-critical',
+                'icon'     => 'critical',
+                'messages' => array_merge( $critical, $attention ),
+            );
+        }
+
+        if ( ! empty( $attention ) ) {
+            return array(
+                'class'    => 'lucd-card-attention',
+                'icon'     => 'warning',
+                'messages' => $attention,
+            );
+        }
+
+        $default_note = self::normalize_note( $default_message );
+
+        return array(
+            'class'    => 'lucd-card-good',
+            'icon'     => 'check',
+            'messages' => array( '' !== $default_note ? $default_note : '' ),
+        );
+    }
+
+    /**
+     * Format a labelled note for display.
+     *
+     * @param string $label Optional label describing the note subject.
+     * @param string $note  The note text.
+     * @return string
+     */
+    private static function format_labelled_note( $label, $note ) {
+        $normalized_note = self::normalize_note( $note );
+        if ( '' === $normalized_note ) {
+            return '';
+        }
+
+        $normalized_label = self::normalize_note( $label );
+        if ( '' === $normalized_label ) {
+            return $normalized_note;
+        }
+
+        return sprintf( '%s — %s', $normalized_label, $normalized_note );
+    }
+
+    /**
+     * Filter notes to remove empty values and normalize whitespace.
+     *
+     * @param array $notes Collection of note strings.
+     * @return array
+     */
+    private static function filter_notes( array $notes ) {
+        $filtered = array();
+        foreach ( $notes as $note ) {
+            $normalized = self::normalize_note( $note );
+            if ( '' !== $normalized ) {
+                $filtered[] = $normalized;
+            }
+        }
+        return $filtered;
+    }
+
+    /**
+     * Normalize note text to a trimmed string.
+     *
+     * @param mixed $text Raw text value.
+     * @return string
+     */
+    private static function normalize_note( $text ) {
+        if ( is_array( $text ) || is_object( $text ) ) {
+            return '';
+        }
+
+        return trim( (string) $text );
     }
 
     /**
@@ -318,6 +485,9 @@ class LUC_Dashboard_Frontend {
         <div class="lucd-profile-view">
             <?php foreach ( $fields as $field => $info ) : ?>
                 <?php
+                if ( ! empty( $info['admin_only'] ) ) {
+                    continue;
+                }
                 if ( in_array( $field, array( 'client_since', 'company_logo', 'mailing_country', 'company_country' ), true ) ) {
                     continue;
                 }
@@ -364,6 +534,9 @@ class LUC_Dashboard_Frontend {
             <input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'lucd_save_profile' ) ); ?>" />
             <?php foreach ( $fields as $field => $info ) : ?>
                 <?php
+                if ( ! empty( $info['admin_only'] ) ) {
+                    continue;
+                }
                 if ( in_array( $field, array( 'client_since', 'mailing_country', 'company_country' ), true ) ) {
                     continue;
                 }
@@ -420,6 +593,10 @@ class LUC_Dashboard_Frontend {
         $formats = array();
 
         foreach ( $fields as $field => $info ) {
+            if ( ! empty( $info['admin_only'] ) ) {
+                continue;
+            }
+
             if ( in_array( $field, array( 'company_logo', 'mailing_country', 'company_country' ), true ) ) {
                 continue;
             }
@@ -431,6 +608,9 @@ class LUC_Dashboard_Frontend {
                     if ( empty( $value ) || ! is_email( $value ) ) {
                         wp_send_json_error( __( 'Invalid email address.', 'lucd' ) );
                     }
+                    break;
+                case 'textarea':
+                    $value = sanitize_textarea_field( $raw );
                     break;
                 case 'url':
                     $value = esc_url_raw( $raw );
