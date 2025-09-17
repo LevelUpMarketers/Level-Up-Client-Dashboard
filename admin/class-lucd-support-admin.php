@@ -81,6 +81,8 @@ class LUC_Support_Admin {
             ) ),
             'initial_description' => array( 'label' => __( 'Initial Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
             'ticket_updates'      => array( 'label' => __( 'Ticket Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'attention_needed'    => array( 'label' => __( 'Attention Needed', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'critical_issue'      => array( 'label' => __( 'Critical Issue', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
         );
     }
 
@@ -166,7 +168,7 @@ class LUC_Support_Admin {
             if ( 'ticket_client' === $field ) {
                 continue;
             }
-            if ( in_array( $field, array( 'initial_description', 'ticket_updates' ), true ) ) {
+            if ( 'textarea' === $info['type'] ) {
                 $value = isset( $_POST[ $field ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $field ] ) ) : '';
             } elseif ( in_array( $field, array( 'client_id', 'duration_minutes' ), true ) ) {
                 $value = isset( $_POST[ $field ] ) ? absint( $_POST[ $field ] ) : 0;
@@ -184,7 +186,7 @@ class LUC_Support_Admin {
         }
 
         $table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
-        $format = array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s' );
+        $format = array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
         global $wpdb;
         $inserted = $wpdb->insert( $table, $data, $format );
 
@@ -293,7 +295,7 @@ class LUC_Support_Admin {
             if ( 'ticket_client' === $field ) {
                 continue;
             }
-            if ( in_array( $field, array( 'initial_description', 'ticket_updates' ), true ) ) {
+            if ( 'textarea' === $info['type'] ) {
                 $value = isset( $_POST[ $field ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $field ] ) ) : '';
             } elseif ( in_array( $field, array( 'client_id', 'duration_minutes' ), true ) ) {
                 $value = isset( $_POST[ $field ] ) ? absint( $_POST[ $field ] ) : 0;
@@ -311,7 +313,7 @@ class LUC_Support_Admin {
         }
 
         $table   = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
-        $formats = array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s' );
+        $formats = array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
         global $wpdb;
         $updated = $wpdb->update( $table, $data, array( 'ticket_id' => $ticket_id ), $formats, array( '%d' ) );
 

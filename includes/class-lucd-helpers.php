@@ -109,6 +109,16 @@ class LUC_D_Helpers {
             'social_bbb'       => array( 'label' => __( 'BBB', 'level-up-client-dashboard' ), 'type' => 'url' ),
             'client_since'     => array( 'label' => __( 'Client Since', 'level-up-client-dashboard' ), 'type' => 'date' ),
             'company_logo'     => array( 'label' => __( 'Company Logo', 'level-up-client-dashboard' ), 'type' => 'hidden' ),
+            'attention_needed' => array(
+                'label'      => __( 'Attention Needed', 'level-up-client-dashboard' ),
+                'type'       => 'textarea',
+                'admin_only' => true,
+            ),
+            'critical_issue'   => array(
+                'label'      => __( 'Critical Issue', 'level-up-client-dashboard' ),
+                'type'       => 'textarea',
+                'admin_only' => true,
+            ),
         );
     }
 
@@ -162,6 +172,8 @@ class LUC_D_Helpers {
             'monthly_support_time' => array( 'label' => __( 'Monthly Support Time', 'level-up-client-dashboard' ), 'type' => 'number', 'step' => '1' ),
             'description'          => array( 'label' => __( 'Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
             'project_updates'      => array( 'label' => __( 'Project Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'attention_needed'     => array( 'label' => __( 'Attention Needed', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'critical_issue'       => array( 'label' => __( 'Critical Issue', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
         );
     }
 

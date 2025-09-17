@@ -188,9 +188,25 @@
     border-color: #ddd;
 }
 
+.lucd-card-critical {
+    border-color: #f5c6cb;
+}
+
 .lucd-card-icon {
     font-size: 40px;
     margin-bottom: 10px;
+}
+
+.lucd-card-messages {
+    width: 100%;
+}
+
+.lucd-card-message {
+    margin: 0 0 8px;
+}
+
+.lucd-card-message:last-child {
+    margin-bottom: 0;
 }
 
 .lucd-icon-check::before {
@@ -206,6 +222,11 @@
 .lucd-icon-info::before {
     content: '\2139';
     color: #17a2b8;
+}
+
+.lucd-icon-critical::before {
+    content: '\2757';
+    color: #dc3545;
 }
 
 .lucd-logo-preview {
