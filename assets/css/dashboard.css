@@ -1,3 +1,29 @@
+#lucd-content #loginform label{
+    display:block;
+}
+
+#lucd-content #loginform{
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 20px;
+    max-width: 400px;
+}
+
+#lucd-content #loginform input[type="text"], #lucd-content #loginform input[type="password"]{
+    width: 100%;
+}
+
+#lucd-content #loginform #wp-submit{
+    background-color: rgba(0, 202, 144, 1.0);
+    padding: 17px 40px;
+    line-height: 16px;
+    border-radius: 50px;
+    cursor: pointer;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+
 .lucd-dashboard {
     display: flex;
     flex-wrap: wrap;
@@ -193,19 +219,33 @@
     border:1px solid #dcdcde;
 }
 
+.lucd-accordion-content .lucd-field{
+    display: inline-block;
+    margin: 0 10px 40px 0;
+    vertical-align: top;
+    width: 240px;
+    overflow: hidden;
+    background-color: #ededed;
+    padding: 10px;
+    border: solid 1px #ddd;
+}
+
 .lucd-accordion-header {
     cursor: pointer;
     margin: 0;
     padding: 10px;
     background: #f0f0f1;
     border: 1px solid #dcdcde;
+    margin: 0 !important;
 }
 
 .lucd-accordion-content {
     display: none;
     border: 1px solid #dcdcde;
     border-top: none;
-    padding: 10px;
+    padding: 30px 10px 10px 10px;
+    text-align: center;
+    background-color: #f5f5f5;
 }
 
 @media (max-width: 768px) {
