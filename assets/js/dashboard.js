@@ -194,7 +194,15 @@ jQuery( function( $ ) {
     } );
 
     $( document ).on( 'click', '.lucd-accordion-header', function() {
-        $( this ).next( '.lucd-accordion-content' ).slideToggle();
+        var $content = $( this ).next( '.lucd-accordion-content' );
+        $content.slideToggle( 200, function() {
+            var $panel = $( this );
+            if ( $panel.is( ':visible' ) ) {
+                applyFieldTruncation( $panel );
+            } else {
+                hideTooltip();
+            }
+        } );
     } );
 
     $( document ).on( 'input', '#mailing_postcode, #company_postcode', function(){

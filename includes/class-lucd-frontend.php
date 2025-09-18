@@ -537,10 +537,8 @@ class LUC_Dashboard_Frontend {
             $label = self::get_alert_label( $alert['type'] );
 
             echo '<div class="' . esc_attr( $class ) . '">';
-            $icon_class = 'critical' === $alert['type'] ? 'lucd-alert-icon-critical' : 'lucd-alert-icon-attention';
-            echo '<span class="lucd-alert-icon ' . esc_attr( $icon_class ) . '" aria-hidden="true"></span>';
             if ( '' !== $label ) {
-                echo '<span class="lucd-visually-hidden">' . esc_html( $label ) . ':</span>';
+                echo '<span class="lucd-alert-label">' . esc_html( $label ) . ':</span>';
             }
             echo '<span class="lucd-alert-text">' . nl2br( esc_html( $alert['message'] ) ) . '</span>';
             echo '</div>';
@@ -674,6 +672,232 @@ class LUC_Dashboard_Frontend {
     }
 
     /**
+     * Apply contextual formatting for field values prior to display.
+     *
+     * @param string $text  Raw field text.
+     * @param string $field Field name.
+     * @param array  $info  Field metadata definition.
+     * @return string
+     */
+    private static function transform_field_display_value( $text, $field, array $info ) {
+        $value = self::format_currency_value( $text, $field, $info );
+        $value = self::format_support_time_value( $value, $field );
+        $value = self::format_duration_value( $value, $field );
+
+        return self::format_datetime_for_display( $value, $field, $info );
+    }
+
+    /**
+     * Format numeric currency values with a US dollar prefix.
+     *
+     * @param string $text  Raw field text.
+     * @param string $field Field name.
+     * @param array  $info  Field metadata definition.
+     * @return string
+     */
+    private static function format_currency_value( $text, $field, array $info ) {
+        $text = trim( (string) $text );
+        if ( '' === $text ) {
+            return '';
+        }
+
+        if ( ! self::is_currency_field( $field, $info ) ) {
+            return $text;
+        }
+
+        $normalized = preg_replace( '/[^0-9\.\-]/', '', $text );
+
+        if ( '' === $normalized || ! is_numeric( $normalized ) ) {
+            $trimmed = trim( $text );
+            if ( '' === $trimmed || 0 === strpos( $trimmed, '$' ) ) {
+                return $trimmed;
+            }
+
+            return $trimmed;
+        }
+
+        $value = (float) $normalized;
+        $sign  = $value < 0 ? '-' : '';
+
+        $formatted_number = self::format_number( abs( $value ), 2 );
+
+        return $sign . '$' . $formatted_number;
+    }
+
+    /**
+     * Determine whether a field should be treated as currency.
+     *
+     * @param string $field Field name.
+     * @param array  $info  Field metadata definition.
+     * @return bool
+     */
+    private static function is_currency_field( $field, array $info ) {
+        $currency_fields = array( 'total_one_time_cost', 'mrr', 'arr' );
+        if ( in_array( $field, $currency_fields, true ) ) {
+            return true;
+        }
+
+        if ( empty( $info['class'] ) ) {
+            return false;
+        }
+
+        $classes = preg_split( '/\s+/', $info['class'] );
+        if ( ! $classes || ! is_array( $classes ) ) {
+            return false;
+        }
+
+        foreach ( $classes as $class ) {
+            if ( 'lucd-currency' === $class ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Append an hours label to monthly support time values.
+     *
+     * @param string $text  Raw field text.
+     * @param string $field Field name.
+     * @return string
+     */
+    private static function format_support_time_value( $text, $field ) {
+        if ( 'monthly_support_time' !== $field ) {
+            return $text;
+        }
+
+        $text = trim( (string) $text );
+        if ( '' === $text ) {
+            return '';
+        }
+
+        $normalized = preg_replace( '/[^0-9\.\-]/', '', $text );
+        if ( '' === $normalized || ! is_numeric( $normalized ) ) {
+            return $text;
+        }
+
+        $value      = (float) $normalized;
+        $precision  = self::get_decimal_precision( $normalized, 2 );
+        $number     = self::format_number( $value, $precision );
+        $abs_value  = abs( $value );
+        $is_singular = abs( $abs_value - 1 ) < 0.00001;
+
+        $label = $is_singular ? __( 'Hour', 'lucd' ) : __( 'Hours', 'lucd' );
+
+        return trim( $number . ' ' . $label );
+    }
+
+    /**
+     * Convert minute durations into hour and minute strings.
+     *
+     * @param string $text  Raw field text.
+     * @param string $field Field name.
+     * @return string
+     */
+    private static function format_duration_value( $text, $field ) {
+        if ( 'duration_minutes' !== $field ) {
+            return $text;
+        }
+
+        $text = trim( (string) $text );
+        if ( '' === $text ) {
+            return '';
+        }
+
+        $normalized = preg_replace( '/[^0-9\-]/', '', $text );
+        if ( '' === $normalized || '-' === $normalized || ! is_numeric( $normalized ) ) {
+            return $text;
+        }
+
+        $minutes     = (int) $normalized;
+        $abs_minutes = abs( $minutes );
+        $hours       = (int) floor( $abs_minutes / 60 );
+        $remaining   = $abs_minutes % 60;
+        $parts       = array();
+
+        if ( $hours > 0 ) {
+            $parts[] = sprintf( _n( '%d Hour', '%d Hours', $hours, 'lucd' ), $hours );
+        }
+
+        if ( $remaining > 0 || 0 === $hours ) {
+            $parts[] = sprintf( _n( '%d Minute', '%d Minutes', $remaining, 'lucd' ), $remaining );
+        }
+
+        $formatted = implode( ', ', $parts );
+
+        if ( $minutes < 0 ) {
+            return '-' . ltrim( $formatted );
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Determine decimal precision based on a numeric string.
+     *
+     * @param string $number_string Numeric string to evaluate.
+     * @param int    $max_decimals  Maximum decimals allowed.
+     * @return int
+     */
+    private static function get_decimal_precision( $number_string, $max_decimals = 2 ) {
+        $number_string = (string) $number_string;
+        $decimal_pos   = strpos( $number_string, '.' );
+
+        if ( false === $decimal_pos ) {
+            return 0;
+        }
+
+        $fraction = substr( $number_string, $decimal_pos + 1 );
+        $fraction = rtrim( $fraction, '0' );
+
+        if ( '' === $fraction ) {
+            return 0;
+        }
+
+        return min( $max_decimals, strlen( $fraction ) );
+    }
+
+    /**
+     * Format numbers using WordPress helpers when available.
+     *
+     * @param float $number    Number to format.
+     * @param int   $decimals  Number of decimal places.
+     * @return string
+     */
+    private static function format_number( $number, $decimals = 0 ) {
+        if ( function_exists( 'number_format_i18n' ) ) {
+            return number_format_i18n( $number, $decimals );
+        }
+
+        return number_format( $number, $decimals, '.', ',' );
+    }
+
+    /**
+     * Get the placeholder label for unknown date values.
+     *
+     * @return string
+     */
+    private static function get_tbd_label() {
+        return __( 'TBD', 'lucd' );
+    }
+
+    /**
+     * Check whether a datetime string represents a zero value.
+     *
+     * @param string $value Raw datetime string.
+     * @return bool
+     */
+    private static function is_zero_date_value( $value ) {
+        $value = trim( (string) $value );
+        if ( '' === $value ) {
+            return false;
+        }
+
+        return (bool) preg_match( '/^0{4}-0{2}-0{2}(?:[ T]0{2}:0{2}(?::0{2})?(?:\.0+)?)?$/', $value );
+    }
+
+    /**
      * Format field text as a human-readable date or time when appropriate.
      *
      * @param string $text  Raw field text.
@@ -701,6 +925,10 @@ class LUC_Dashboard_Frontend {
 
         if ( ! $should_format ) {
             return $text;
+        }
+
+        if ( self::is_zero_date_value( $text ) ) {
+            return self::get_tbd_label();
         }
 
         $formatted = self::format_human_readable_datetime( $text );
@@ -819,7 +1047,7 @@ class LUC_Dashboard_Frontend {
             return '<div ' . $attributes . '>' . self::get_empty_placeholder_markup() . '</div>';
         }
 
-        $display_source = self::format_datetime_for_display( $raw_text, $field, $info );
+        $display_source = self::transform_field_display_value( $raw_text, $field, $info );
         $display_text   = self::format_field_display_text( $display_source );
 
         if ( self::should_allow_multiline_value( $display_text, $type ) ) {
@@ -886,8 +1114,6 @@ class LUC_Dashboard_Frontend {
 
         $fields = LUC_D_Helpers::get_project_fields();
 
-        $client_label = $client['company_name'] ? $client['company_name'] : trim( $client['first_name'] . ' ' . $client['last_name'] );
-
         $project_critical  = array();
         $project_attention = array();
         foreach ( $projects as $project ) {
@@ -901,12 +1127,11 @@ class LUC_Dashboard_Frontend {
         ob_start();
         self::render_alert_bar( $alerts );
         foreach ( $projects as $project ) {
-            $project['project_client'] = $client_label;
             echo '<div class="lucd-accordion">';
             echo '<h3 class="lucd-accordion-header">' . esc_html( $project['project_name'] ) . '</h3>';
             echo '<div class="lucd-accordion-content">';
             foreach ( $fields as $field => $info ) {
-                if ( in_array( $field, array( 'client_id', 'project_name' ), true ) || 'hidden' === $info['type'] ) {
+                if ( in_array( $field, array( 'client_id', 'project_name', 'project_client' ), true ) || 'hidden' === $info['type'] ) {
                     continue;
                 }
                 $value = isset( $project[ $field ] ) ? $project[ $field ] : '';
@@ -956,8 +1181,6 @@ class LUC_Dashboard_Frontend {
 
         $fields = LUC_D_Helpers::get_ticket_fields();
 
-        $client_label = $client['company_name'] ? $client['company_name'] : trim( $client['first_name'] . ' ' . $client['last_name'] );
-
         $ticket_critical  = array();
         $ticket_attention = array();
 
@@ -975,8 +1198,6 @@ class LUC_Dashboard_Frontend {
         self::render_alert_bar( $alerts );
 
         foreach ( $tickets as $ticket ) {
-            $ticket['ticket_client'] = $client_label;
-
             $ticket_number = isset( $ticket['ticket_id'] ) ? (int) $ticket['ticket_id'] : 0;
             $header_parts  = array();
 
@@ -1016,7 +1237,7 @@ class LUC_Dashboard_Frontend {
             echo '<div class="lucd-accordion-content">';
 
             foreach ( $fields as $field => $info ) {
-                if ( in_array( $field, array( 'client_id' ), true ) || 'hidden' === $info['type'] ) {
+                if ( in_array( $field, array( 'client_id', 'ticket_client' ), true ) || 'hidden' === $info['type'] ) {
                     continue;
                 }
 

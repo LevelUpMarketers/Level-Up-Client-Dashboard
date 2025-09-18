@@ -214,6 +214,7 @@
     border-radius: 4px;
     display: flex;
     align-items: flex-start;
+    gap: 6px;
 }
 
 .lucd-info-bar-alert .lucd-info-critical {
@@ -258,6 +259,10 @@
 .lucd-alert-icon-attention::before {
     content: '\26A0';
     font-size: 16px;
+}
+
+.lucd-alert-label {
+    font-weight: 600;
 }
 
 .lucd-alert-text {

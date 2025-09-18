@@ -148,6 +148,7 @@ class LUC_D_Helpers {
                     __( 'Custom Development', 'level-up-client-dashboard' ),
                 ),
             ),
+            'description'          => array( 'label' => __( 'Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
             'start_date'           => array( 'label' => __( 'Start Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
             'end_date'             => array( 'label' => __( 'End Date', 'level-up-client-dashboard' ), 'type' => 'date' ),
             'status'               => array(
@@ -170,7 +171,6 @@ class LUC_D_Helpers {
             'mrr'                  => array( 'label' => __( 'MRR', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
             'arr'                  => array( 'label' => __( 'ARR', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-currency' ),
             'monthly_support_time' => array( 'label' => __( 'Monthly Support Time', 'level-up-client-dashboard' ), 'type' => 'number', 'step' => '1' ),
-            'description'          => array( 'label' => __( 'Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
             'project_updates'      => array( 'label' => __( 'Project Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
             'attention_needed'     => array( 'label' => __( 'Attention Needed', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
             'critical_issue'       => array( 'label' => __( 'Critical Issue', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
@@ -184,18 +184,18 @@ class LUC_D_Helpers {
      */
     public static function get_ticket_fields() {
         return array(
-            'ticket_id'          => array( 'label' => __( 'Ticket #', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'ticket_client'      => array( 'label' => __( 'Client', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-project-client' ),
-            'client_id'          => array( 'type' => 'hidden' ),
-            'creation_datetime'  => array( 'label' => __( 'Created', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'start_time'         => array( 'label' => __( 'Start Time', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'end_time'           => array( 'label' => __( 'End Time', 'level-up-client-dashboard' ), 'type' => 'text' ),
-            'duration_minutes'   => array( 'label' => __( 'Duration (minutes)', 'level-up-client-dashboard' ), 'type' => 'number' ),
-            'status'             => array( 'label' => __( 'Status', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'ticket_id'           => array( 'label' => __( 'Ticket #', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'ticket_client'       => array( 'label' => __( 'Client', 'level-up-client-dashboard' ), 'type' => 'text', 'class' => 'lucd-project-client' ),
+            'client_id'           => array( 'type' => 'hidden' ),
             'initial_description' => array( 'label' => __( 'Initial Description', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
-            'ticket_updates'     => array( 'label' => __( 'Ticket Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
-            'attention_needed'   => array( 'label' => __( 'Attention Needed', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
-            'critical_issue'     => array( 'label' => __( 'Critical Issue', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'ticket_updates'      => array( 'label' => __( 'Ticket Updates', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'creation_datetime'   => array( 'label' => __( 'Created', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'start_time'          => array( 'label' => __( 'Start Time', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'end_time'            => array( 'label' => __( 'End Time', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'duration_minutes'    => array( 'label' => __( 'Duration', 'level-up-client-dashboard' ), 'type' => 'number' ),
+            'status'              => array( 'label' => __( 'Status', 'level-up-client-dashboard' ), 'type' => 'text' ),
+            'attention_needed'    => array( 'label' => __( 'Attention Needed', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
+            'critical_issue'      => array( 'label' => __( 'Critical Issue', 'level-up-client-dashboard' ), 'type' => 'textarea' ),
         );
     }
 
