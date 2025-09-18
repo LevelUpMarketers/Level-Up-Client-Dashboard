@@ -141,7 +141,7 @@ class LUC_Dashboard_Frontend {
                 $content = self::get_projects_section( $user_id );
                 break;
             case 'tickets':
-                $content = '<p>' . esc_html__( 'Support Tickets coming soon.', 'lucd' ) . '</p>';
+                $content = self::get_tickets_section( $user_id );
                 break;
             case 'plugins':
                 $content = '<p>' . esc_html__( 'Your Plugins coming soon.', 'lucd' ) . '</p>';
@@ -603,6 +603,102 @@ class LUC_Dashboard_Frontend {
             echo '</div>';
             echo '</div>';
         }
+        return ob_get_clean();
+    }
+
+    /**
+     * Build Support Tickets section markup.
+     *
+     * @param int $user_id Current user ID.
+     * @return string
+     */
+    private static function get_tickets_section( $user_id ) {
+        global $wpdb;
+
+        $clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+        $tickets_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
+
+        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+        if ( ! $client ) {
+            return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
+        }
+
+        $tickets = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$tickets_table} WHERE client_id = %d ORDER BY creation_datetime DESC",
+                (int) $client['client_id']
+            ),
+            ARRAY_A
+        );
+
+        if ( empty( $tickets ) ) {
+            return '<p>' . esc_html__( 'No support tickets found.', 'lucd' ) . '</p>';
+        }
+
+        $fields = LUC_D_Helpers::get_ticket_fields();
+
+        $client_label = $client['company_name'] ? $client['company_name'] : trim( $client['first_name'] . ' ' . $client['last_name'] );
+
+        $ticket_critical  = array();
+        $ticket_attention = array();
+
+        foreach ( $tickets as $ticket ) {
+            $ticket_number = isset( $ticket['ticket_id'] ) ? (int) $ticket['ticket_id'] : 0;
+            $label         = $ticket_number ? sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_number ) : __( 'Ticket', 'lucd' );
+
+            $ticket_critical[]  = self::format_labelled_note( $label, isset( $ticket['critical_issue'] ) ? $ticket['critical_issue'] : '' );
+            $ticket_attention[] = self::format_labelled_note( $label, isset( $ticket['attention_needed'] ) ? $ticket['attention_needed'] : '' );
+        }
+
+        $alerts = self::prepare_alert_items( $ticket_critical, $ticket_attention );
+
+        ob_start();
+        self::render_alert_bar( $alerts );
+
+        foreach ( $tickets as $ticket ) {
+            $ticket['ticket_client'] = $client_label;
+
+            $ticket_number = isset( $ticket['ticket_id'] ) ? (int) $ticket['ticket_id'] : 0;
+            $header_parts  = array();
+
+            if ( $ticket_number ) {
+                $header_parts[] = sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_number );
+            }
+
+            $status = isset( $ticket['status'] ) ? self::normalize_note( $ticket['status'] ) : '';
+            if ( '' !== $status ) {
+                $header_parts[] = sprintf( __( 'Status: %s', 'lucd' ), $status );
+            }
+
+            if ( empty( $header_parts ) ) {
+                $header_parts[] = __( 'Ticket', 'lucd' );
+            }
+
+            echo '<div class="lucd-accordion">';
+            echo '<h3 class="lucd-accordion-header">' . esc_html( implode( ' — ', $header_parts ) ) . '</h3>';
+            echo '<div class="lucd-accordion-content">';
+
+            foreach ( $fields as $field => $info ) {
+                if ( in_array( $field, array( 'client_id' ), true ) || 'hidden' === $info['type'] ) {
+                    continue;
+                }
+
+                if ( 'ticket_id' === $field && $ticket_number ) {
+                    continue;
+                }
+
+                $value = isset( $ticket[ $field ] ) ? $ticket[ $field ] : '';
+
+                echo '<div class="lucd-field">';
+                echo '<label>' . esc_html( $info['label'] ) . '</label>';
+                echo '<div class="lucd-field-value">' . nl2br( esc_html( $value ) ) . '</div>';
+                echo '</div>';
+            }
+
+            echo '</div>';
+            echo '</div>';
+        }
+
         return ob_get_clean();
     }
 
