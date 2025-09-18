@@ -272,6 +272,10 @@
     border:1px solid #dcdcde;
 }
 
+.lucd-accordion {
+    margin-bottom: 10px;
+}
+
 .lucd-accordion-content .lucd-field{
     display: inline-block;
     margin: 0 10px 40px 0;

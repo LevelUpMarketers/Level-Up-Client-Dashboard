@@ -509,7 +509,7 @@ class LUC_Dashboard_Frontend {
             return $normalized_note;
         }
 
-        return sprintf( '%s — %s', $normalized_label, $normalized_note );
+        return sprintf( '%s - %s', $normalized_label, $normalized_note );
     }
 
     /**
@@ -662,8 +662,37 @@ class LUC_Dashboard_Frontend {
             $header_parts  = array();
 
             if ( $ticket_number ) {
-                $header_parts[] = sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_number );
+                $header_title = sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_number );
+            } else {
+                $header_title = __( 'Ticket', 'lucd' );
             }
+
+            $created_at = isset( $ticket['creation_datetime'] ) ? trim( (string) $ticket['creation_datetime'] ) : '';
+            if ( '' !== $created_at ) {
+                $formatted_date = '';
+                $date_format = function_exists( 'get_option' ) ? get_option( 'date_format' ) : 'F j, Y';
+
+                if ( function_exists( 'mysql2date' ) ) {
+                    $formatted_date = mysql2date( $date_format, $created_at );
+                }
+
+                if ( '' === $formatted_date ) {
+                    $timestamp = strtotime( $created_at );
+                    if ( false !== $timestamp ) {
+                        if ( function_exists( 'date_i18n' ) ) {
+                            $formatted_date = date_i18n( $date_format, $timestamp );
+                        } else {
+                            $formatted_date = date( $date_format, $timestamp );
+                        }
+                    }
+                }
+
+                if ( '' !== $formatted_date ) {
+                    $header_title = sprintf( __( '%1$s [%2$s]', 'lucd' ), $header_title, $formatted_date );
+                }
+            }
+
+            $header_parts[] = $header_title;
 
             $status = isset( $ticket['status'] ) ? self::normalize_note( $ticket['status'] ) : '';
             if ( '' !== $status ) {
@@ -675,7 +704,7 @@ class LUC_Dashboard_Frontend {
             }
 
             echo '<div class="lucd-accordion">';
-            echo '<h3 class="lucd-accordion-header">' . esc_html( implode( ' — ', $header_parts ) ) . '</h3>';
+            echo '<h3 class="lucd-accordion-header">' . esc_html( implode( ' - ', $header_parts ) ) . '</h3>';
             echo '<div class="lucd-accordion-content">';
 
             foreach ( $fields as $field => $info ) {
