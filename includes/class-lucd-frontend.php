@@ -332,7 +332,7 @@ class LUC_Dashboard_Frontend {
             return array(
                 'class'    => 'lucd-card-critical',
                 'icon'     => 'critical',
-                'messages' => array_merge( $critical, $attention ),
+                'messages' => self::format_alert_messages( $critical, $attention ),
             );
         }
 
@@ -340,7 +340,7 @@ class LUC_Dashboard_Frontend {
             return array(
                 'class'    => 'lucd-card-attention',
                 'icon'     => 'warning',
-                'messages' => $attention,
+                'messages' => self::format_alert_messages( array(), $attention ),
             );
         }
 
@@ -351,6 +351,144 @@ class LUC_Dashboard_Frontend {
             'icon'     => 'check',
             'messages' => array( '' !== $default_note ? $default_note : '' ),
         );
+    }
+
+    /**
+     * Format alert notes for display with their labels.
+     *
+     * @param array $critical_notes  Critical issue notes.
+     * @param array $attention_notes Attention needed notes.
+     * @return array
+     */
+    private static function format_alert_messages( array $critical_notes, array $attention_notes ) {
+        $messages = array();
+
+        foreach ( $critical_notes as $note ) {
+            $message = self::build_alert_message( $note, 'critical' );
+            if ( '' !== $message ) {
+                $messages[] = $message;
+            }
+        }
+
+        foreach ( $attention_notes as $note ) {
+            $message = self::build_alert_message( $note, 'attention' );
+            if ( '' !== $message ) {
+                $messages[] = $message;
+            }
+        }
+
+        return $messages;
+    }
+
+    /**
+     * Build a single alert message with its translated label.
+     *
+     * @param string $note Alert note text.
+     * @param string $type Alert type identifier.
+     * @return string
+     */
+    private static function build_alert_message( $note, $type ) {
+        $normalized = self::normalize_note( $note );
+        if ( '' === $normalized ) {
+            return '';
+        }
+
+        $label = self::get_alert_label( $type );
+        if ( '' === $label ) {
+            return $normalized;
+        }
+
+        return sprintf(
+            /* translators: 1: alert label (e.g. Critical Issue), 2: alert message. */
+            __( '%1$s: %2$s', 'lucd' ),
+            $label,
+            $normalized
+        );
+    }
+
+    /**
+     * Map alert types to their human readable labels.
+     *
+     * @param string $type Alert type identifier.
+     * @return string
+     */
+    private static function get_alert_label( $type ) {
+        switch ( $type ) {
+            case 'critical':
+                return __( 'Critical Issue', 'lucd' );
+            case 'attention':
+                return __( 'Attention Needed', 'lucd' );
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Prepare alert items for rendering in a notification bar.
+     *
+     * @param array $critical_notes  Critical issue notes.
+     * @param array $attention_notes Attention needed notes.
+     * @return array
+     */
+    private static function prepare_alert_items( array $critical_notes, array $attention_notes ) {
+        $items = array();
+
+        foreach ( self::filter_notes( $critical_notes ) as $note ) {
+            $items[] = array(
+                'type'    => 'critical',
+                'message' => $note,
+            );
+        }
+
+        foreach ( self::filter_notes( $attention_notes ) as $note ) {
+            $items[] = array(
+                'type'    => 'attention',
+                'message' => $note,
+            );
+        }
+
+        return $items;
+    }
+
+    /**
+     * Output an info bar with alert messages when needed.
+     *
+     * @param array $alerts Alert data produced by prepare_alert_items().
+     */
+    private static function render_alert_bar( array $alerts ) {
+        $prepared = array();
+
+        foreach ( $alerts as $alert ) {
+            $message = isset( $alert['message'] ) ? self::normalize_note( $alert['message'] ) : '';
+            if ( '' === $message ) {
+                continue;
+            }
+
+            $type = isset( $alert['type'] ) && 'critical' === $alert['type'] ? 'critical' : 'attention';
+
+            $prepared[] = array(
+                'type'    => $type,
+                'message' => $message,
+            );
+        }
+
+        if ( empty( $prepared ) ) {
+            return;
+        }
+
+        echo '<div class="lucd-info-bar lucd-info-bar-alert">';
+        foreach ( $prepared as $alert ) {
+            $class = 'critical' === $alert['type'] ? 'lucd-info-critical' : 'lucd-info-attention';
+            $label = self::get_alert_label( $alert['type'] );
+
+            echo '<div class="' . esc_attr( $class ) . '">';
+            if ( '' !== $label ) {
+                echo '<strong>' . esc_html( $label ) . ':</strong> ';
+            }
+            echo nl2br( esc_html( $alert['message'] ) );
+            echo '</div>';
+        }
+        echo '</div>';
     }
 
     /**
@@ -431,7 +569,18 @@ class LUC_Dashboard_Frontend {
 
         $client_label = $client['company_name'] ? $client['company_name'] : trim( $client['first_name'] . ' ' . $client['last_name'] );
 
+        $project_critical  = array();
+        $project_attention = array();
+        foreach ( $projects as $project ) {
+            $label               = isset( $project['project_name'] ) ? $project['project_name'] : '';
+            $project_critical[]  = self::format_labelled_note( $label, isset( $project['critical_issue'] ) ? $project['critical_issue'] : '' );
+            $project_attention[] = self::format_labelled_note( $label, isset( $project['attention_needed'] ) ? $project['attention_needed'] : '' );
+        }
+
+        $alerts = self::prepare_alert_items( $project_critical, $project_attention );
+
         ob_start();
+        self::render_alert_bar( $alerts );
         foreach ( $projects as $project ) {
             $project['project_client'] = $client_label;
             echo '<div class="lucd-accordion">';
@@ -475,7 +624,13 @@ class LUC_Dashboard_Frontend {
 
         $fields = LUC_D_Helpers::get_client_fields();
 
+        $profile_alerts = self::prepare_alert_items(
+            array( isset( $client['critical_issue'] ) ? $client['critical_issue'] : '' ),
+            array( isset( $client['attention_needed'] ) ? $client['attention_needed'] : '' )
+        );
+
         ob_start();
+        self::render_alert_bar( $profile_alerts );
         $logo_url = '';
         if ( ! empty( $client['company_logo'] ) ) {
             $logo_url = wp_get_attachment_image_url( (int) $client['company_logo'], 'full' );
