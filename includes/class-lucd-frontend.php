@@ -544,6 +544,151 @@ class LUC_Dashboard_Frontend {
     }
 
     /**
+     * Determine whether a field should be displayed for the current record.
+     *
+     * @param string $field Field key.
+     * @param mixed  $value Field value.
+     * @return bool
+     */
+    private static function should_display_field( $field, $value ) {
+        if ( in_array( $field, array( 'attention_needed', 'critical_issue' ), true ) ) {
+            return '' !== self::normalize_note( $value );
+        }
+
+        return true;
+    }
+
+    /**
+     * Prepare text for use within field value containers.
+     *
+     * @param mixed $value Raw field value.
+     * @return string
+     */
+    private static function prepare_field_text( $value ) {
+        if ( is_object( $value ) ) {
+            if ( method_exists( $value, '__toString' ) ) {
+                $value = (string) $value;
+            } else {
+                return '';
+            }
+        }
+
+        if ( is_array( $value ) ) {
+            return '';
+        }
+
+        return trim( (string) $value );
+    }
+
+    /**
+     * Format field text for truncated display.
+     *
+     * @param string $text Prepared field text.
+     * @return string
+     */
+    private static function format_field_display_text( $text ) {
+        if ( '' === $text ) {
+            return '';
+        }
+
+        $display = str_replace( array( "\r\n", "\r", "\n" ), ' ', $text );
+        $display = preg_replace( '/\s{2,}/', ' ', $display );
+
+        return trim( $display );
+    }
+
+    /**
+     * Retrieve the placeholder markup for empty field values.
+     *
+     * @return string
+     */
+    private static function get_empty_placeholder_markup() {
+        static $markup = null;
+
+        if ( null !== $markup ) {
+            return $markup;
+        }
+
+        $image_url = plugins_url( 'assets/img/letter-x.svg', LUCD_PLUGIN_FILE );
+        $markup    = sprintf(
+            '<span class="lucd-field-empty"><img src="%1$s" alt="%2$s" /></span>',
+            esc_url( $image_url ),
+            esc_attr__( 'Not available', 'lucd' )
+        );
+
+        return $markup;
+    }
+
+    /**
+     * Build markup for displaying a field value.
+     *
+     * @param string $field Field key.
+     * @param mixed  $value Field value.
+     * @param array  $info  Field metadata.
+     * @return string
+     */
+    private static function get_field_value_markup( $field, $value, array $info ) {
+        $full_text = self::prepare_field_text( $value );
+        $type      = isset( $info['type'] ) ? $info['type'] : 'text';
+
+        $classes = array( 'lucd-field-value' );
+        if ( ! empty( $info['class'] ) ) {
+            $extra_classes = preg_split( '/\s+/', $info['class'] );
+            if ( $extra_classes && is_array( $extra_classes ) ) {
+                foreach ( $extra_classes as $extra_class ) {
+                    $sanitized = sanitize_html_class( $extra_class );
+                    if ( '' !== $sanitized ) {
+                        $classes[] = $sanitized;
+                    }
+                }
+            }
+        }
+
+        $attributes = sprintf(
+            'class="%1$s" data-full-text="%2$s"',
+            esc_attr( implode( ' ', array_unique( $classes ) ) ),
+            esc_attr( $full_text )
+        );
+
+        $output = '<div ' . $attributes . '>';
+
+        if ( '' === $full_text ) {
+            $output .= self::get_empty_placeholder_markup();
+            $output .= '</div>';
+            return $output;
+        }
+
+        $display_text = self::format_field_display_text( $full_text );
+
+        switch ( $type ) {
+            case 'url':
+                $url = esc_url( $full_text );
+                if ( $url ) {
+                    $output .= '<a href="' . $url . '" target="_blank" rel="noopener">' . esc_html( $display_text ) . '</a>';
+                } else {
+                    $output .= esc_html( $display_text );
+                }
+                break;
+            case 'email':
+                $email = sanitize_email( $full_text );
+                if ( $email ) {
+                    $mailto = antispambot( $email );
+                    $output .= '<a href="mailto:' . esc_attr( $mailto ) . '">' . esc_html( $display_text ) . '</a>';
+                } else {
+                    $output .= esc_html( $display_text );
+                }
+                break;
+            default:
+                $output .= esc_html( $display_text );
+                break;
+        }
+
+        $output .= '</div>';
+
+        return $output;
+    }
+
+    /**
      * Build Projects & Services section markup.
      *
      * @param int $user_id Current user ID.
@@ -591,13 +736,13 @@ class LUC_Dashboard_Frontend {
                     continue;
                 }
                 $value = isset( $project[ $field ] ) ? $project[ $field ] : '';
+                if ( ! self::should_display_field( $field, $value ) ) {
+                    continue;
+                }
+
                 echo '<div class="lucd-field">';
                 echo '<label>' . esc_html( $info['label'] ) . '</label>';
-                if ( 'url' === $info['type'] && $value ) {
-                    echo '<a href="' . esc_url( $value ) . '" target="_blank" rel="noopener">' . esc_html( $value ) . '</a>';
-                } else {
-                    echo '<div class="lucd-field-value">' . nl2br( esc_html( $value ) ) . '</div>';
-                }
+                echo self::get_field_value_markup( $field, $value, $info );
                 echo '</div>';
             }
             echo '</div>';
@@ -667,9 +812,9 @@ class LUC_Dashboard_Frontend {
                 $header_title = __( 'Ticket', 'lucd' );
             }
 
-            $created_at = isset( $ticket['creation_datetime'] ) ? trim( (string) $ticket['creation_datetime'] ) : '';
+            $created_at     = isset( $ticket['creation_datetime'] ) ? trim( (string) $ticket['creation_datetime'] ) : '';
+            $formatted_date = '';
             if ( '' !== $created_at ) {
-                $formatted_date = '';
                 $date_format = function_exists( 'get_option' ) ? get_option( 'date_format' ) : 'F j, Y';
 
                 if ( function_exists( 'mysql2date' ) ) {
@@ -687,12 +832,13 @@ class LUC_Dashboard_Frontend {
                     }
                 }
 
-                if ( '' !== $formatted_date ) {
-                    $header_title = sprintf( __( '%1$s [%2$s]', 'lucd' ), $header_title, $formatted_date );
-                }
             }
 
             $header_parts[] = $header_title;
+
+            if ( '' !== $formatted_date ) {
+                $header_parts[] = $formatted_date;
+            }
 
             $status = isset( $ticket['status'] ) ? self::normalize_note( $ticket['status'] ) : '';
             if ( '' !== $status ) {
@@ -718,9 +864,13 @@ class LUC_Dashboard_Frontend {
 
                 $value = isset( $ticket[ $field ] ) ? $ticket[ $field ] : '';
 
+                if ( ! self::should_display_field( $field, $value ) ) {
+                    continue;
+                }
+
                 echo '<div class="lucd-field">';
                 echo '<label>' . esc_html( $info['label'] ) . '</label>';
-                echo '<div class="lucd-field-value">' . nl2br( esc_html( $value ) ) . '</div>';
+                echo self::get_field_value_markup( $field, $value, $info );
                 echo '</div>';
             }
 
@@ -760,7 +910,6 @@ class LUC_Dashboard_Frontend {
         if ( ! empty( $client['company_logo'] ) ) {
             $logo_url = wp_get_attachment_image_url( (int) $client['company_logo'], 'full' );
         }
-        $na_text = __( 'N/A', 'lucd' );
         ?>
         <div class="lucd-profile-view">
             <?php foreach ( $fields as $field => $info ) : ?>
@@ -776,26 +925,10 @@ class LUC_Dashboard_Frontend {
                     $states = LUC_D_Helpers::get_us_states();
                     $value  = isset( $states[ $value ] ) ? $states[ $value ] : $value;
                 }
-                $has_value = '' !== trim( (string) $value );
                 ?>
                 <div class="lucd-field">
                     <label><?php echo esc_html( $info['label'] ); ?></label>
-                    <div class="lucd-field-value" data-full-text="<?php echo esc_attr( $has_value ? $value : '' ); ?>">
-                        <?php
-                        if ( $has_value && 'company_website' === $field ) {
-                            $url = esc_url( $value );
-                            if ( $url ) {
-                                echo '<a href="' . $url . '" target="_blank" rel="noopener">' . esc_html( $value ) . '</a>';
-                            } else {
-                                echo esc_html( $value );
-                            }
-                        } elseif ( $has_value ) {
-                            echo esc_html( $value );
-                        } else {
-                            echo esc_html( $na_text );
-                        }
-                        ?>
-                    </div>
+                    <?php echo self::get_field_value_markup( $field, $value, $info ); ?>
                 </div>
                 <?php if ( 'social_bbb' === $field ) : ?>
                     <div class="lucd-field lucd-field-logo">
@@ -803,7 +936,7 @@ class LUC_Dashboard_Frontend {
                         <?php if ( $logo_url ) : ?>
                             <div class="lucd-logo-preview" style="background-image:url(<?php echo esc_url( $logo_url ); ?>);display:block;"></div>
                         <?php else : ?>
-                            <div class="lucd-field-value" data-full-text=""><?php echo esc_html( $na_text ); ?></div>
+                            <?php echo self::get_field_value_markup( 'company_logo', '', array() ); ?>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>

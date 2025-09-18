@@ -82,7 +82,7 @@
     border: solid 1px #ddd;
 }
 
-.lucd-profile-view .lucd-field-value {
+.lucd-field-value {
     display: block;
     max-width: 100%;
     overflow: hidden;
@@ -90,11 +90,11 @@
     white-space: nowrap;
 }
 
-.lucd-profile-view .lucd-field-value.lucd-truncated {
+.lucd-field-value.lucd-truncated {
     cursor: help;
 }
 
-.lucd-profile-view .lucd-field-value a {
+.lucd-field-value a {
     display: inline-block;
     max-width: 100%;
     overflow: hidden;
@@ -102,6 +102,20 @@
     white-space: inherit;
     text-decoration: underline;
     color: inherit;
+}
+
+.lucd-field-empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1em;
+    min-width: 1em;
+}
+
+.lucd-field-empty img {
+    width: 16px;
+    height: 16px;
+    display: block;
 }
 
 .lucd-tooltip {
