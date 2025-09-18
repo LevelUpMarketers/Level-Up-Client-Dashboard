@@ -293,15 +293,33 @@ class LUC_Dashboard_Frontend {
 
         if ( ! empty( $status['messages'] ) && is_array( $status['messages'] ) ) {
             foreach ( $status['messages'] as $message ) {
-                $normalized = self::normalize_note( $message );
-                if ( '' !== $normalized ) {
-                    $messages[] = $normalized;
+                $type = 'info';
+                $text = '';
+
+                if ( is_array( $message ) ) {
+                    $type = isset( $message['type'] ) ? (string) $message['type'] : 'info';
+                    $text = isset( $message['message'] ) ? $message['message'] : '';
+                } else {
+                    $text = $message;
                 }
+
+                $normalized = self::normalize_note( $text );
+                if ( '' === $normalized ) {
+                    continue;
+                }
+
+                $messages[] = array(
+                    'type'    => $type,
+                    'message' => $normalized,
+                );
             }
         }
 
         if ( empty( $messages ) ) {
-            $messages[] = '';
+            $messages[] = array(
+                'type'    => 'info',
+                'message' => '',
+            );
         }
         ?>
         <div class="lucd-card <?php echo esc_attr( $status_class ); ?>" data-section="<?php echo esc_attr( $section ); ?>">
@@ -309,7 +327,36 @@ class LUC_Dashboard_Frontend {
             <div class="lucd-card-icon lucd-icon-<?php echo esc_attr( $icon ); ?>"></div>
             <div class="lucd-card-messages">
                 <?php foreach ( $messages as $message ) : ?>
-                    <p class="lucd-card-message"><?php echo nl2br( esc_html( $message ) ); ?></p>
+                    <?php
+                    $type    = isset( $message['type'] ) ? (string) $message['type'] : 'info';
+                    $text    = isset( $message['message'] ) ? $message['message'] : '';
+                    $classes = array( 'lucd-card-message' );
+                    $icon_html = '';
+
+                    if ( in_array( $type, array( 'critical', 'attention' ), true ) ) {
+                        $icon_class = 'critical' === $type ? 'lucd-alert-icon-critical' : 'lucd-alert-icon-attention';
+                        $label      = self::get_alert_label( $type );
+                        $icon_html  = '<span class="lucd-alert-icon ' . esc_attr( $icon_class ) . '" aria-hidden="true"></span>';
+
+                        if ( '' !== $label ) {
+                            $icon_html .= '<span class="lucd-visually-hidden">' . esc_html( $label ) . ':</span>';
+                        }
+
+                        $classes[] = 'lucd-card-message-alert';
+                    }
+                    ?>
+                    <div class="<?php echo esc_attr( implode( ' ', array_unique( $classes ) ) ); ?>">
+                        <?php if ( '' !== $icon_html ) : ?>
+                            <?php echo $icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                        <?php endif; ?>
+                        <span class="lucd-card-message-text">
+                            <?php if ( '' === $text ) : ?>
+                                &nbsp;
+                            <?php else : ?>
+                                <?php echo nl2br( esc_html( $text ) ); ?>
+                            <?php endif; ?>
+                        </span>
+                    </div>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -346,10 +393,23 @@ class LUC_Dashboard_Frontend {
 
         $default_note = self::normalize_note( $default_message );
 
+        if ( '' === $default_note ) {
+            return array(
+                'class'    => 'lucd-card-good',
+                'icon'     => 'check',
+                'messages' => array(),
+            );
+        }
+
         return array(
             'class'    => 'lucd-card-good',
             'icon'     => 'check',
-            'messages' => array( '' !== $default_note ? $default_note : '' ),
+            'messages' => array(
+                array(
+                    'type'    => 'info',
+                    'message' => $default_note,
+                ),
+            ),
         );
     }
 
@@ -365,14 +425,14 @@ class LUC_Dashboard_Frontend {
 
         foreach ( $critical_notes as $note ) {
             $message = self::build_alert_message( $note, 'critical' );
-            if ( '' !== $message ) {
+            if ( $message ) {
                 $messages[] = $message;
             }
         }
 
         foreach ( $attention_notes as $note ) {
             $message = self::build_alert_message( $note, 'attention' );
-            if ( '' !== $message ) {
+            if ( $message ) {
                 $messages[] = $message;
             }
         }
@@ -381,28 +441,23 @@ class LUC_Dashboard_Frontend {
     }
 
     /**
-     * Build a single alert message with its translated label.
+     * Build a single alert message with its alert type metadata.
      *
      * @param string $note Alert note text.
      * @param string $type Alert type identifier.
-     * @return string
+     * @return array|null
      */
     private static function build_alert_message( $note, $type ) {
         $normalized = self::normalize_note( $note );
         if ( '' === $normalized ) {
-            return '';
+            return null;
         }
 
-        $label = self::get_alert_label( $type );
-        if ( '' === $label ) {
-            return $normalized;
-        }
+        $alert_type = in_array( $type, array( 'critical', 'attention' ), true ) ? $type : 'info';
 
-        return sprintf(
-            /* translators: 1: alert label (e.g. Critical Issue), 2: alert message. */
-            __( '%1$s: %2$s', 'lucd' ),
-            $label,
-            $normalized
+        return array(
+            'type'    => $alert_type,
+            'message' => $normalized,
         );
     }
 
@@ -482,10 +537,12 @@ class LUC_Dashboard_Frontend {
             $label = self::get_alert_label( $alert['type'] );
 
             echo '<div class="' . esc_attr( $class ) . '">';
+            $icon_class = 'critical' === $alert['type'] ? 'lucd-alert-icon-critical' : 'lucd-alert-icon-attention';
+            echo '<span class="lucd-alert-icon ' . esc_attr( $icon_class ) . '" aria-hidden="true"></span>';
             if ( '' !== $label ) {
-                echo '<strong>' . esc_html( $label ) . ':</strong> ';
+                echo '<span class="lucd-visually-hidden">' . esc_html( $label ) . ':</span>';
             }
-            echo nl2br( esc_html( $alert['message'] ) );
+            echo '<span class="lucd-alert-text">' . nl2br( esc_html( $alert['message'] ) ) . '</span>';
             echo '</div>';
         }
         echo '</div>';
@@ -598,6 +655,115 @@ class LUC_Dashboard_Frontend {
     }
 
     /**
+     * Determine whether a field value should allow multi-line display before truncation.
+     *
+     * @param string $text Prepared display text.
+     * @param string $type Field type identifier.
+     * @return bool
+     */
+    private static function should_allow_multiline_value( $text, $type ) {
+        if ( '' === $text ) {
+            return false;
+        }
+
+        if ( in_array( $type, array( 'url', 'email' ), true ) ) {
+            return false;
+        }
+
+        return (bool) preg_match( '/\s/', $text );
+    }
+
+    /**
+     * Format field text as a human-readable date or time when appropriate.
+     *
+     * @param string $text  Raw field text.
+     * @param string $field Field name.
+     * @param array  $info  Field metadata definition.
+     * @return string
+     */
+    private static function format_datetime_for_display( $text, $field, array $info ) {
+        $text = trim( (string) $text );
+        if ( '' === $text ) {
+            return '';
+        }
+
+        $type            = isset( $info['type'] ) ? $info['type'] : 'text';
+        $datetime_fields = array(
+            'client_since',
+            'start_date',
+            'end_date',
+            'creation_datetime',
+            'start_time',
+            'end_time',
+        );
+
+        $should_format = 'date' === $type || in_array( $field, $datetime_fields, true );
+
+        if ( ! $should_format ) {
+            return $text;
+        }
+
+        $formatted = self::format_human_readable_datetime( $text );
+
+        if ( '' === $formatted ) {
+            return $text;
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Convert a stored datetime string into a human-friendly representation.
+     *
+     * @param string $value Raw date or time string.
+     * @return string
+     */
+    private static function format_human_readable_datetime( $value ) {
+        $value = trim( (string) $value );
+        if ( '' === $value ) {
+            return '';
+        }
+
+        $normalized = str_replace( 'T', ' ', $value );
+        $has_date   = (bool) preg_match( '/\d{4}-\d{2}-\d{2}/', $normalized );
+        $has_time   = (bool) preg_match( '/\d{1,2}:\d{2}/', $normalized );
+
+        $timestamp = strtotime( $normalized );
+        if ( false === $timestamp ) {
+            return '';
+        }
+
+        if ( $has_date && $has_time ) {
+            return self::format_timestamp_value( $timestamp, 'n/j/Y - g:i A' );
+        }
+
+        if ( $has_time && ! $has_date ) {
+            return self::format_timestamp_value( $timestamp, 'g:i A' );
+        }
+
+        if ( $has_date ) {
+            return self::format_timestamp_value( $timestamp, 'n/j/Y' );
+        }
+
+        return '';
+    }
+
+    /**
+     * Format a timestamp using WordPress internationalization helpers when available.
+     *
+     * @param int    $timestamp Unix timestamp.
+     * @param string $format    Desired format string.
+     * @return string
+     */
+    private static function format_timestamp_value( $timestamp, $format ) {
+        if ( function_exists( 'date_i18n' ) ) {
+            return date_i18n( $format, $timestamp );
+        }
+
+        return date( $format, $timestamp );
+    }
+
+    /**
      * Retrieve the placeholder markup for empty field values.
      *
      * @return string
@@ -628,8 +794,8 @@ class LUC_Dashboard_Frontend {
      * @return string
      */
     private static function get_field_value_markup( $field, $value, array $info ) {
-        $full_text = self::prepare_field_text( $value );
-        $type      = isset( $info['type'] ) ? $info['type'] : 'text';
+        $raw_text = self::prepare_field_text( $value );
+        $type     = isset( $info['type'] ) ? $info['type'] : 'text';
 
         $classes = array( 'lucd-field-value' );
         if ( ! empty( $info['class'] ) ) {
@@ -644,25 +810,33 @@ class LUC_Dashboard_Frontend {
             }
         }
 
+        if ( '' === $raw_text ) {
+            $attributes = sprintf(
+                'class="%1$s" data-full-text=""',
+                esc_attr( implode( ' ', array_unique( $classes ) ) )
+            );
+
+            return '<div ' . $attributes . '>' . self::get_empty_placeholder_markup() . '</div>';
+        }
+
+        $display_source = self::format_datetime_for_display( $raw_text, $field, $info );
+        $display_text   = self::format_field_display_text( $display_source );
+
+        if ( self::should_allow_multiline_value( $display_text, $type ) ) {
+            $classes[] = 'lucd-field-multiline';
+        }
+
         $attributes = sprintf(
             'class="%1$s" data-full-text="%2$s"',
             esc_attr( implode( ' ', array_unique( $classes ) ) ),
-            esc_attr( $full_text )
+            esc_attr( $display_text )
         );
 
         $output = '<div ' . $attributes . '>';
 
-        if ( '' === $full_text ) {
-            $output .= self::get_empty_placeholder_markup();
-            $output .= '</div>';
-            return $output;
-        }
-
-        $display_text = self::format_field_display_text( $full_text );
-
         switch ( $type ) {
             case 'url':
-                $url = esc_url( $full_text );
+                $url = esc_url( $raw_text );
                 if ( $url ) {
                     $output .= '<a href="' . $url . '" target="_blank" rel="noopener">' . esc_html( $display_text ) . '</a>';
                 } else {
@@ -670,7 +844,7 @@ class LUC_Dashboard_Frontend {
                 }
                 break;
             case 'email':
-                $email = sanitize_email( $full_text );
+                $email = sanitize_email( $raw_text );
                 if ( $email ) {
                     $mailto = antispambot( $email );
                     $output .= '<a href="mailto:' . esc_attr( $mailto ) . '">' . esc_html( $display_text ) . '</a>';
@@ -815,23 +989,11 @@ class LUC_Dashboard_Frontend {
             $created_at     = isset( $ticket['creation_datetime'] ) ? trim( (string) $ticket['creation_datetime'] ) : '';
             $formatted_date = '';
             if ( '' !== $created_at ) {
-                $date_format = function_exists( 'get_option' ) ? get_option( 'date_format' ) : 'F j, Y';
-
-                if ( function_exists( 'mysql2date' ) ) {
-                    $formatted_date = mysql2date( $date_format, $created_at );
-                }
+                $formatted_date = self::format_human_readable_datetime( $created_at );
 
                 if ( '' === $formatted_date ) {
-                    $timestamp = strtotime( $created_at );
-                    if ( false !== $timestamp ) {
-                        if ( function_exists( 'date_i18n' ) ) {
-                            $formatted_date = date_i18n( $date_format, $timestamp );
-                        } else {
-                            $formatted_date = date( $date_format, $timestamp );
-                        }
-                    }
+                    $formatted_date = self::format_field_display_text( $created_at );
                 }
-
             }
 
             $header_parts[] = $header_title;

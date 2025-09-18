@@ -51,7 +51,11 @@ jQuery( function( $ ) {
                 return;
             }
 
-            if ( element.scrollWidth > Math.ceil( $value.innerWidth() ) ) {
+            var widthOverflow  = element.scrollWidth - Math.ceil( $value.innerWidth() );
+            var heightOverflow = element.scrollHeight - Math.ceil( $value.innerHeight() );
+            var isTruncated    = widthOverflow > 1 || heightOverflow > 1;
+
+            if ( isTruncated ) {
                 $value.addClass( 'lucd-truncated' ).attr( 'aria-label', fullText );
             } else if ( wasTrunc ) {
                 hideTooltip();
