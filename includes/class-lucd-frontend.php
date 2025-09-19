@@ -202,16 +202,14 @@ class LUC_Dashboard_Frontend {
         $projects_critical  = array();
         $projects_attention = array();
         foreach ( $project_notes as $project_note ) {
-            $label = isset( $project_note['project_name'] ) ? $project_note['project_name'] : '';
-
-            $critical = self::format_labelled_note( $label, isset( $project_note['critical_issue'] ) ? $project_note['critical_issue'] : '' );
-            if ( '' !== $critical ) {
-                $projects_critical[] = $critical;
+            $critical_note = isset( $project_note['critical_issue'] ) ? $project_note['critical_issue'] : '';
+            if ( '' !== self::normalize_note( $critical_note ) ) {
+                $projects_critical[] = $critical_note;
             }
 
-            $attention = self::format_labelled_note( $label, isset( $project_note['attention_needed'] ) ? $project_note['attention_needed'] : '' );
-            if ( '' !== $attention ) {
-                $projects_attention[] = $attention;
+            $attention_note = isset( $project_note['attention_needed'] ) ? $project_note['attention_needed'] : '';
+            if ( '' !== self::normalize_note( $attention_note ) ) {
+                $projects_attention[] = $attention_note;
             }
         }
 
@@ -1122,9 +1120,15 @@ class LUC_Dashboard_Frontend {
         $project_critical  = array();
         $project_attention = array();
         foreach ( $projects as $project ) {
-            $label               = isset( $project['project_name'] ) ? $project['project_name'] : '';
-            $project_critical[]  = self::format_labelled_note( $label, isset( $project['critical_issue'] ) ? $project['critical_issue'] : '' );
-            $project_attention[] = self::format_labelled_note( $label, isset( $project['attention_needed'] ) ? $project['attention_needed'] : '' );
+            $critical_note = isset( $project['critical_issue'] ) ? $project['critical_issue'] : '';
+            if ( '' !== self::normalize_note( $critical_note ) ) {
+                $project_critical[] = $critical_note;
+            }
+
+            $attention_note = isset( $project['attention_needed'] ) ? $project['attention_needed'] : '';
+            if ( '' !== self::normalize_note( $attention_note ) ) {
+                $project_attention[] = $attention_note;
+            }
         }
 
         $alerts = self::prepare_alert_items( $project_critical, $project_attention );
