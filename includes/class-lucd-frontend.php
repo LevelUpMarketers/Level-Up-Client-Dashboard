@@ -53,7 +53,7 @@ class LUC_Dashboard_Frontend {
 
             $clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
             $clients       = $wpdb->get_results(
-                "SELECT client_id, company_name, primary_contact_first_name, primary_contact_last_name FROM {$clients_table} ORDER BY company_name ASC, client_id ASC",
+                "SELECT client_id, company_name, first_name, last_name, email FROM {$clients_table} ORDER BY company_name ASC, client_id ASC",
                 ARRAY_A
             );
         }
@@ -104,7 +104,8 @@ class LUC_Dashboard_Frontend {
                                 <?php
                                 $client_id   = isset( $client['client_id'] ) ? (int) $client['client_id'] : 0;
                                 $company     = isset( $client['company_name'] ) ? trim( (string) $client['company_name'] ) : '';
-                                $contact     = trim( implode( ' ', array_filter( array( isset( $client['primary_contact_first_name'] ) ? $client['primary_contact_first_name'] : '', isset( $client['primary_contact_last_name'] ) ? $client['primary_contact_last_name'] : '' ) ) ) );
+                                $contact     = trim( implode( ' ', array_filter( array( isset( $client['first_name'] ) ? $client['first_name'] : '', isset( $client['last_name'] ) ? $client['last_name'] : '' ) ) ) );
+                                $email       = isset( $client['email'] ) ? trim( (string) $client['email'] ) : '';
                                 $label_parts = array();
 
                                 if ( '' !== $company ) {
@@ -113,6 +114,10 @@ class LUC_Dashboard_Frontend {
 
                                 if ( '' !== $contact ) {
                                     $label_parts[] = $contact;
+                                }
+
+                                if ( empty( $label_parts ) && '' !== $email ) {
+                                    $label_parts[] = $email;
                                 }
 
                                 if ( empty( $label_parts ) ) {
