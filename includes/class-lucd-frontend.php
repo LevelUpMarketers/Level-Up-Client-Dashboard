@@ -216,17 +216,14 @@ class LUC_Dashboard_Frontend {
         $tickets_critical  = array();
         $tickets_attention = array();
         foreach ( $ticket_notes as $ticket_note ) {
-            $ticket_id = isset( $ticket_note['ticket_id'] ) ? (int) $ticket_note['ticket_id'] : 0;
-            $label     = $ticket_id ? sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_id ) : __( 'Ticket', 'lucd' );
-
-            $critical = self::format_labelled_note( $label, isset( $ticket_note['critical_issue'] ) ? $ticket_note['critical_issue'] : '' );
-            if ( '' !== $critical ) {
-                $tickets_critical[] = $critical;
+            $critical_note = self::normalize_note( isset( $ticket_note['critical_issue'] ) ? $ticket_note['critical_issue'] : '' );
+            if ( '' !== $critical_note ) {
+                $tickets_critical[] = $critical_note;
             }
 
-            $attention = self::format_labelled_note( $label, isset( $ticket_note['attention_needed'] ) ? $ticket_note['attention_needed'] : '' );
-            if ( '' !== $attention ) {
-                $tickets_attention[] = $attention;
+            $attention_note = self::normalize_note( isset( $ticket_note['attention_needed'] ) ? $ticket_note['attention_needed'] : '' );
+            if ( '' !== $attention_note ) {
+                $tickets_attention[] = $attention_note;
             }
         }
 
@@ -547,27 +544,6 @@ class LUC_Dashboard_Frontend {
             echo '</div>';
         }
         echo '</div>';
-    }
-
-    /**
-     * Format a labelled note for display.
-     *
-     * @param string $label Optional label describing the note subject.
-     * @param string $note  The note text.
-     * @return string
-     */
-    private static function format_labelled_note( $label, $note ) {
-        $normalized_note = self::normalize_note( $note );
-        if ( '' === $normalized_note ) {
-            return '';
-        }
-
-        $normalized_label = self::normalize_note( $label );
-        if ( '' === $normalized_label ) {
-            return $normalized_note;
-        }
-
-        return sprintf( '%s - %s', $normalized_label, $normalized_note );
     }
 
     /**
@@ -1194,11 +1170,15 @@ class LUC_Dashboard_Frontend {
         $ticket_attention = array();
 
         foreach ( $tickets as $ticket ) {
-            $ticket_number = isset( $ticket['ticket_id'] ) ? (int) $ticket['ticket_id'] : 0;
-            $label         = $ticket_number ? sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_number ) : __( 'Ticket', 'lucd' );
+            $critical_note = self::normalize_note( isset( $ticket['critical_issue'] ) ? $ticket['critical_issue'] : '' );
+            if ( '' !== $critical_note ) {
+                $ticket_critical[] = $critical_note;
+            }
 
-            $ticket_critical[]  = self::format_labelled_note( $label, isset( $ticket['critical_issue'] ) ? $ticket['critical_issue'] : '' );
-            $ticket_attention[] = self::format_labelled_note( $label, isset( $ticket['attention_needed'] ) ? $ticket['attention_needed'] : '' );
+            $attention_note = self::normalize_note( isset( $ticket['attention_needed'] ) ? $ticket['attention_needed'] : '' );
+            if ( '' !== $attention_note ) {
+                $ticket_attention[] = $attention_note;
+            }
         }
 
         $alerts = self::prepare_alert_items( $ticket_critical, $ticket_attention );
