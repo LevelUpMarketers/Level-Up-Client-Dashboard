@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="lucdAvatarGradient" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#00ca90" />
+      <stop offset="100%" stop-color="#0a2540" />
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="24" r="16" fill="#0a2540" />
+  <path d="M32 38c-15 0-28 7.8-28 17.5V60h56v-4.5C60 45.8 47 38 32 38z" fill="url(#lucdAvatarGradient)" />
+  <circle cx="32" cy="24" r="10" fill="#ffffff" opacity="0.2" />
+</svg>
