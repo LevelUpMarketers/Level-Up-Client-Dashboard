@@ -82,7 +82,7 @@
     border: solid 1px #ddd;
 }
 
-.lucd-profile-view .lucd-field-value {
+.lucd-field-value {
     display: block;
     max-width: 100%;
     overflow: hidden;
@@ -90,11 +90,23 @@
     white-space: nowrap;
 }
 
-.lucd-profile-view .lucd-field-value.lucd-truncated {
+.lucd-field-value.lucd-field-multiline {
+    white-space: normal;
+    line-height: 1.4;
+    max-height: calc(1.4em * 2);
+    overflow: hidden;
+    display: block;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}
+
+.lucd-field-value.lucd-truncated {
     cursor: help;
 }
 
-.lucd-profile-view .lucd-field-value a {
+.lucd-field-value a {
     display: inline-block;
     max-width: 100%;
     overflow: hidden;
@@ -102,6 +114,24 @@
     white-space: inherit;
     text-decoration: underline;
     color: inherit;
+}
+
+.lucd-field-value.lucd-field-multiline a {
+    display: inline;
+}
+
+.lucd-field-empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1em;
+    min-width: 1em;
+}
+
+.lucd-field-empty img {
+    width: 16px;
+    height: 16px;
+    display: block;
 }
 
 .lucd-tooltip {
@@ -165,6 +195,91 @@
     flex: 1;
 }
 
+.lucd-info-bar-alert {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    text-align: left;
+}
+
+.lucd-info-bar-alert > div {
+    flex: 1 1 auto;
+}
+
+.lucd-info-bar-alert .lucd-info-critical,
+.lucd-info-bar-alert .lucd-info-attention {
+    padding: 10px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.lucd-info-bar-alert .lucd-info-critical {
+    border-left: 4px solid #dc3545;
+}
+
+.lucd-info-bar-alert .lucd-info-attention {
+    border-left: 4px solid #ffc107;
+}
+
+.lucd-alert-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.lucd-alert-icon::before {
+    content: '';
+}
+
+.lucd-alert-icon-critical {
+    background: #dc3545;
+    color: #fff;
+}
+
+.lucd-alert-icon-critical::before {
+    content: '!';
+}
+
+.lucd-alert-icon-attention {
+    background: #ffc107;
+    color: #212529;
+}
+
+.lucd-alert-icon-attention::before {
+    content: '\26A0';
+    font-size: 16px;
+}
+
+.lucd-alert-label {
+    font-weight: 600;
+}
+
+.lucd-alert-text {
+    flex: 1 1 auto;
+}
+
+.lucd-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
 .lucd-cards {
     display: flex;
     flex-wrap: wrap;
@@ -203,10 +318,21 @@
 
 .lucd-card-message {
     margin: 0 0 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
 }
 
 .lucd-card-message:last-child {
     margin-bottom: 0;
+}
+
+.lucd-card-message-text {
+    flex: 1 1 auto;
+}
+
+.lucd-card-message-alert .lucd-card-message-text {
+    margin-top: 1px;
 }
 
 .lucd-icon-check::before {
@@ -238,6 +364,10 @@
     background-repeat:no-repeat;
     background-position:center;
     border:1px solid #dcdcde;
+}
+
+.lucd-accordion {
+    margin-bottom: 10px;
 }
 
 .lucd-accordion-content .lucd-field{

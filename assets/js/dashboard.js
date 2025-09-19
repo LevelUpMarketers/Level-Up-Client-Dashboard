@@ -13,17 +13,18 @@ jQuery( function( $ ) {
         } );
     }
 
-    function applyProfileFieldTruncation( $context ) {
+    function applyFieldTruncation( $context ) {
         var $scopes  = $context && $context.length ? $context : $( document );
         var $targets = $();
 
         $scopes.each( function() {
             var $scope = $( this );
-            if ( $scope.is( '.lucd-profile-view' ) ) {
-                $targets = $targets.add( $scope.find( '.lucd-field-value' ) );
-            } else {
-                $targets = $targets.add( $scope.find( '.lucd-profile-view .lucd-field-value' ) );
+
+            if ( $scope.is( '.lucd-field-value[data-full-text]' ) ) {
+                $targets = $targets.add( $scope );
             }
+
+            $targets = $targets.add( $scope.find( '.lucd-field-value[data-full-text]' ) );
         } );
 
         if ( ! $targets.length ) {
@@ -34,6 +35,11 @@ jQuery( function( $ ) {
             var $value   = $( this );
             var fullText = $value.data( 'full-text' );
             var element  = this;
+
+            if ( ! $value.is( ':visible' ) ) {
+                return;
+            }
+
             var wasTrunc = $value.hasClass( 'lucd-truncated' );
 
             $value.removeClass( 'lucd-truncated' ).removeAttr( 'aria-label' );
@@ -45,7 +51,11 @@ jQuery( function( $ ) {
                 return;
             }
 
-            if ( element.scrollWidth > Math.ceil( $value.innerWidth() ) ) {
+            var widthOverflow  = element.scrollWidth - Math.ceil( $value.innerWidth() );
+            var heightOverflow = element.scrollHeight - Math.ceil( $value.innerHeight() );
+            var isTruncated    = widthOverflow > 1 || heightOverflow > 1;
+
+            if ( isTruncated ) {
                 $value.addClass( 'lucd-truncated' ).attr( 'aria-label', fullText );
             } else if ( wasTrunc ) {
                 hideTooltip();
@@ -62,14 +72,14 @@ jQuery( function( $ ) {
 
         if ( ! $container.is( ':visible' ) ) {
             $container.html( html ).fadeIn( 200, function() {
-                applyProfileFieldTruncation( $container );
+                applyFieldTruncation( $container );
             } );
             return;
         }
 
         $container.stop( true, true ).fadeOut( 200, function() {
             $container.html( html ).fadeIn( 200, function() {
-                applyProfileFieldTruncation( $container );
+                applyFieldTruncation( $container );
             } );
         } );
     }
@@ -145,7 +155,7 @@ jQuery( function( $ ) {
         $form.hide();
         var $view = $form.prev( '.lucd-profile-view' );
         $view.show();
-        applyProfileFieldTruncation( $view );
+        applyFieldTruncation( $view );
     } );
 
     $( document ).on( 'submit', '.lucd-profile-edit', function( e ) {
@@ -184,7 +194,15 @@ jQuery( function( $ ) {
     } );
 
     $( document ).on( 'click', '.lucd-accordion-header', function() {
-        $( this ).next( '.lucd-accordion-content' ).slideToggle();
+        var $content = $( this ).next( '.lucd-accordion-content' );
+        $content.slideToggle( 200, function() {
+            var $panel = $( this );
+            if ( $panel.is( ':visible' ) ) {
+                applyFieldTruncation( $panel );
+            } else {
+                hideTooltip();
+            }
+        } );
     } );
 
     $( document ).on( 'input', '#mailing_postcode, #company_postcode', function(){
@@ -197,10 +215,7 @@ jQuery( function( $ ) {
         clearTimeout( resizeTimer );
         resizeTimer = setTimeout( function() {
             hideTooltip();
-            var $views = $( '.lucd-profile-view:visible' );
-            if ( $views.length ) {
-                applyProfileFieldTruncation( $views );
-            }
+            applyFieldTruncation( $( '#lucd-dashboard' ) );
         }, 150 );
     } );
 
