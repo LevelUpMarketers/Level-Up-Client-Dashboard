@@ -1,6 +1,35 @@
 jQuery( function( $ ) {
     var tooltipOffset = 12;
     var $tooltip      = $( '<div class="lucd-tooltip" role="tooltip"></div>' ).appendTo( 'body' ).hide();
+    var isAdminMode   = parseInt( lucdDashboard.isAdmin || 0, 10 ) === 1;
+    var clientSelectionMessage = lucdDashboard.selectClientMessage || '';
+    var currentClientId = '';
+    var $clientSelect   = $( '#lucd-dashboard-client-select' );
+
+    if ( $clientSelect.length ) {
+        currentClientId = $clientSelect.val() || '';
+    }
+
+    function showClientSelectionMessage( $target ) {
+        if ( ! clientSelectionMessage ) {
+            return;
+        }
+
+        var messageHtml = '<p class="lucd-client-selection-message">' + clientSelectionMessage + '</p>';
+
+        if ( $target && $target.length ) {
+            $target.html( messageHtml );
+            if ( $target.is( '.lucd-mobile-content' ) ) {
+                $target.show();
+            }
+            return;
+        }
+
+        var $content = $( '#lucd-content' );
+        if ( $content.length ) {
+            $content.html( messageHtml );
+        }
+    }
 
     function hideTooltip() {
         $tooltip.hide().text( '' );
@@ -85,13 +114,28 @@ jQuery( function( $ ) {
     }
 
     function loadSection( section, $navItem ) {
+        if ( isAdminMode && ! currentClientId ) {
+            if ( window.matchMedia( '(max-width: 768px)' ).matches ) {
+                showClientSelectionMessage( $navItem.find( '.lucd-mobile-content' ) );
+            } else {
+                showClientSelectionMessage();
+            }
+            return;
+        }
+
+        var requestData = {
+            action: 'lucd_load_section',
+            section: section,
+            nonce: lucdDashboard.nonce
+        };
+
+        if ( currentClientId ) {
+            requestData.client_id = currentClientId;
+        }
+
         $.post(
             lucdDashboard.ajaxUrl,
-            {
-                action: 'lucd_load_section',
-                section: section,
-                nonce: lucdDashboard.nonce
-            },
+            requestData,
             function( response ) {
                 if ( ! response.success ) {
                     return;
@@ -219,8 +263,27 @@ jQuery( function( $ ) {
         }, 150 );
     } );
 
+    $( document ).on( 'change', '#lucd-dashboard-client-select', function() {
+        currentClientId = $( this ).val() || '';
+        $( '.lucd-mobile-content' ).empty().hide();
+
+        if ( ! currentClientId ) {
+            showClientSelectionMessage();
+            return;
+        }
+
+        var $defaultItem = $( '.lucd-nav-button[data-section="overview"]' ).closest( '.lucd-nav-item' );
+        if ( $defaultItem.length ) {
+            loadSection( 'overview', $defaultItem );
+        }
+    } );
+
     var $default = $( '.lucd-nav-button[data-section="overview"]' ).closest( '.lucd-nav-item' );
     if ( $default.length ) {
-        loadSection( 'overview', $default );
+        if ( ! isAdminMode || currentClientId ) {
+            loadSection( 'overview', $default );
+        } else {
+            showClientSelectionMessage();
+        }
     }
 } );

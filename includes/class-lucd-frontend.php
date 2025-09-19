@@ -34,6 +34,7 @@ class LUC_Dashboard_Frontend {
         self::enqueue_assets();
 
         $logged_in = is_user_logged_in();
+        $can_switch_clients = $logged_in && current_user_can( 'manage_options' );
 
         $buttons = array(
             'overview' => __( 'Overview', 'lucd' ),
@@ -44,9 +45,93 @@ class LUC_Dashboard_Frontend {
             'billing'  => __( 'Billing', 'lucd' ),
         );
 
+        $clients       = array();
+        $select_prompt = __( 'Select a client to view their dashboard.', 'lucd' );
+
+        if ( $can_switch_clients ) {
+            global $wpdb;
+
+            $clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+            $clients       = $wpdb->get_results(
+                "SELECT client_id, company_name, first_name, last_name, email FROM {$clients_table} ORDER BY company_name ASC, client_id ASC",
+                ARRAY_A
+            );
+        }
+
         ob_start();
         ?>
-        <div id="lucd-dashboard" class="lucd-dashboard">
+        <div id="lucd-dashboard" class="lucd-dashboard" data-admin-mode="<?php echo $can_switch_clients ? '1' : '0'; ?>">
+            <?php if ( $logged_in ) : ?>
+                <?php
+                $user        = wp_get_current_user();
+                $first_name  = trim( (string) $user->first_name );
+                $display_fallbacks = array( (string) $user->display_name, (string) $user->user_login );
+
+                foreach ( $display_fallbacks as $fallback ) {
+                    if ( '' !== $first_name ) {
+                        break;
+                    }
+
+                    $candidate = trim( $fallback );
+                    if ( '' !== $candidate ) {
+                        $first_name = $candidate;
+                    }
+                }
+
+                if ( '' === $first_name ) {
+                    $first_name = __( 'there', 'lucd' );
+                }
+
+                $welcome_icon_url = plugins_url( 'assets/img/lucd-dashboard-placeholder.svg', LUCD_PLUGIN_FILE );
+                ?>
+                <div id="lucd-dashboard-welcome" class="lucd-dashboard-welcome">
+                    <div id="lucd-dashboard-welcome-text" class="lucd-dashboard-welcome-text">
+                        <?php printf( esc_html__( 'Hi %s -  Welcome back! Thanks for being a Level Up client.', 'lucd' ), esc_html( $first_name ) ); ?>
+                    </div>
+                    <div id="lucd-dashboard-welcome-icon-wrapper" class="lucd-dashboard-welcome-icon-wrapper">
+                        <img id="lucd-dashboard-welcome-icon" class="lucd-dashboard-welcome-icon" src="<?php echo esc_url( $welcome_icon_url ); ?>" alt="<?php esc_attr_e( 'Welcome icon', 'lucd' ); ?>" />
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ( $can_switch_clients ) : ?>
+                <div id="lucd-dashboard-client-switcher" class="lucd-dashboard-client-switcher">
+                    <label id="lucd-dashboard-client-switcher-label" class="lucd-dashboard-client-switcher-label" for="lucd-dashboard-client-select"><?php esc_html_e( 'View dashboard as client', 'lucd' ); ?></label>
+                    <div id="lucd-dashboard-client-switcher-control" class="lucd-dashboard-client-switcher-control">
+                        <select id="lucd-dashboard-client-select" class="lucd-dashboard-client-select">
+                            <option value=""><?php echo esc_html( $select_prompt ); ?></option>
+                            <?php foreach ( $clients as $client ) : ?>
+                                <?php
+                                $client_id   = isset( $client['client_id'] ) ? (int) $client['client_id'] : 0;
+                                $company     = isset( $client['company_name'] ) ? trim( (string) $client['company_name'] ) : '';
+                                $contact     = trim( implode( ' ', array_filter( array( isset( $client['first_name'] ) ? $client['first_name'] : '', isset( $client['last_name'] ) ? $client['last_name'] : '' ) ) ) );
+                                $email       = isset( $client['email'] ) ? trim( (string) $client['email'] ) : '';
+                                $label_parts = array();
+
+                                if ( '' !== $company ) {
+                                    $label_parts[] = $company;
+                                }
+
+                                if ( '' !== $contact ) {
+                                    $label_parts[] = $contact;
+                                }
+
+                                if ( empty( $label_parts ) && '' !== $email ) {
+                                    $label_parts[] = $email;
+                                }
+
+                                if ( empty( $label_parts ) ) {
+                                    $label_parts[] = sprintf( __( 'Client #%d', 'lucd' ), $client_id );
+                                }
+
+                                $option_label = implode( ' – ', $label_parts );
+                                ?>
+                                <option value="<?php echo esc_attr( $client_id ); ?>"><?php echo esc_html( $option_label ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+            <?php endif; ?>
             <div class="lucd-nav">
                 <?php foreach ( $buttons as $key => $label ) : ?>
                     <div class="lucd-nav-item">
@@ -59,6 +144,8 @@ class LUC_Dashboard_Frontend {
                 <?php
                 if ( ! $logged_in ) {
                     wp_login_form();
+                } elseif ( $can_switch_clients ) {
+                    echo '<p class="lucd-client-selection-message">' . esc_html( $select_prompt ) . '</p>';
                 }
                 ?>
             </div>
@@ -91,8 +178,10 @@ class LUC_Dashboard_Frontend {
                 'lucd-dashboard',
                 'lucdDashboard',
                 array(
-                    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-                    'nonce'   => wp_create_nonce( 'lucd_dashboard_nonce' ),
+                    'ajaxUrl'              => admin_url( 'admin-ajax.php' ),
+                    'nonce'                => wp_create_nonce( 'lucd_dashboard_nonce' ),
+                    'isAdmin'              => current_user_can( 'manage_options' ) ? 1 : 0,
+                    'selectClientMessage'  => __( 'Select a client to view their dashboard.', 'lucd' ),
                 )
             );
         }
@@ -129,19 +218,27 @@ class LUC_Dashboard_Frontend {
 
         $section = isset( $_POST['section'] ) ? sanitize_key( wp_unslash( $_POST['section'] ) ) : '';
         $user_id = get_current_user_id();
+        $client_id = null;
+
+        if ( current_user_can( 'manage_options' ) && isset( $_POST['client_id'] ) ) {
+            $maybe_client_id = absint( wp_unslash( $_POST['client_id'] ) );
+            if ( $maybe_client_id > 0 ) {
+                $client_id = $maybe_client_id;
+            }
+        }
 
         switch ( $section ) {
             case 'profile':
-                $content = self::get_profile_section( $user_id );
+                $content = self::get_profile_section( $user_id, $client_id );
                 break;
             case 'overview':
-                $content = self::get_overview_section( $user_id );
+                $content = self::get_overview_section( $user_id, $client_id );
                 break;
             case 'projects':
-                $content = self::get_projects_section( $user_id );
+                $content = self::get_projects_section( $user_id, $client_id );
                 break;
             case 'tickets':
-                $content = self::get_tickets_section( $user_id );
+                $content = self::get_tickets_section( $user_id, $client_id );
                 break;
             case 'plugins':
                 $content = '<p>' . esc_html__( 'Your Plugins coming soon.', 'lucd' ) . '</p>';
@@ -157,33 +254,66 @@ class LUC_Dashboard_Frontend {
     }
 
     /**
-     * Build overview section markup.
+     * Retrieve a client record using the current user context.
      *
-     * @param int $user_id Current user ID.
-     * @return string
+     * @param int      $user_id   WordPress user ID.
+     * @param int|null $client_id Optional client ID override for administrators.
+     * @return array|null
      */
-    private static function get_overview_section( $user_id ) {
+    private static function get_client_record( $user_id, $client_id = null ) {
         global $wpdb;
 
         $clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
+
+        if ( null !== $client_id ) {
+            if ( ! current_user_can( 'manage_options' ) ) {
+                return null;
+            }
+
+            return $wpdb->get_row(
+                $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE client_id = %d", (int) $client_id ),
+                ARRAY_A
+            );
+        }
+
+        if ( $user_id <= 0 ) {
+            return null;
+        }
+
+        return $wpdb->get_row(
+            $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE wp_user_id = %d", (int) $user_id ),
+            ARRAY_A
+        );
+    }
+
+    /**
+     * Build overview section markup.
+     *
+     * @param int      $user_id   Current user ID.
+     * @param int|null $client_id Optional client ID override for administrators.
+     * @return string
+     */
+    private static function get_overview_section( $user_id, $client_id = null ) {
+        global $wpdb;
+
         $projects_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_table() );
         $tickets_table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
         $plugins_table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::plugins_table() );
 
-        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+        $client = self::get_client_record( $user_id, $client_id );
         if ( ! $client ) {
             return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
         }
 
-        $client_id      = (int) $client['client_id'];
-        $projects_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$projects_table} WHERE client_id = %d", $client_id ) );
-        $plugins_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$plugins_table} WHERE client_id = %d", $client_id ) );
-        $tickets_count  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$tickets_table} WHERE client_id = %d", $client_id ) );
+        $target_client_id = (int) $client['client_id'];
+        $projects_count   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$projects_table} WHERE client_id = %d", $target_client_id ) );
+        $plugins_count    = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$plugins_table} WHERE client_id = %d", $target_client_id ) );
+        $tickets_count    = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$tickets_table} WHERE client_id = %d", $target_client_id ) );
 
         $project_notes = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT project_name, attention_needed, critical_issue FROM {$projects_table} WHERE client_id = %d",
-                $client_id
+                $target_client_id
             ),
             ARRAY_A
         );
@@ -191,7 +321,7 @@ class LUC_Dashboard_Frontend {
         $ticket_notes = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT ticket_id, attention_needed, critical_issue FROM {$tickets_table} WHERE client_id = %d",
-                $client_id
+                $target_client_id
             ),
             ARRAY_A
         );
@@ -202,33 +332,28 @@ class LUC_Dashboard_Frontend {
         $projects_critical  = array();
         $projects_attention = array();
         foreach ( $project_notes as $project_note ) {
-            $label = isset( $project_note['project_name'] ) ? $project_note['project_name'] : '';
-
-            $critical = self::format_labelled_note( $label, isset( $project_note['critical_issue'] ) ? $project_note['critical_issue'] : '' );
-            if ( '' !== $critical ) {
-                $projects_critical[] = $critical;
+            $critical_note = isset( $project_note['critical_issue'] ) ? $project_note['critical_issue'] : '';
+            if ( '' !== self::normalize_note( $critical_note ) ) {
+                $projects_critical[] = $critical_note;
             }
 
-            $attention = self::format_labelled_note( $label, isset( $project_note['attention_needed'] ) ? $project_note['attention_needed'] : '' );
-            if ( '' !== $attention ) {
-                $projects_attention[] = $attention;
+            $attention_note = isset( $project_note['attention_needed'] ) ? $project_note['attention_needed'] : '';
+            if ( '' !== self::normalize_note( $attention_note ) ) {
+                $projects_attention[] = $attention_note;
             }
         }
 
         $tickets_critical  = array();
         $tickets_attention = array();
         foreach ( $ticket_notes as $ticket_note ) {
-            $ticket_id = isset( $ticket_note['ticket_id'] ) ? (int) $ticket_note['ticket_id'] : 0;
-            $label     = $ticket_id ? sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_id ) : __( 'Ticket', 'lucd' );
-
-            $critical = self::format_labelled_note( $label, isset( $ticket_note['critical_issue'] ) ? $ticket_note['critical_issue'] : '' );
-            if ( '' !== $critical ) {
-                $tickets_critical[] = $critical;
+            $critical_note = self::normalize_note( isset( $ticket_note['critical_issue'] ) ? $ticket_note['critical_issue'] : '' );
+            if ( '' !== $critical_note ) {
+                $tickets_critical[] = $critical_note;
             }
 
-            $attention = self::format_labelled_note( $label, isset( $ticket_note['attention_needed'] ) ? $ticket_note['attention_needed'] : '' );
-            if ( '' !== $attention ) {
-                $tickets_attention[] = $attention;
+            $attention_note = self::normalize_note( isset( $ticket_note['attention_needed'] ) ? $ticket_note['attention_needed'] : '' );
+            if ( '' !== $attention_note ) {
+                $tickets_attention[] = $attention_note;
             }
         }
 
@@ -290,6 +415,7 @@ class LUC_Dashboard_Frontend {
         $status_class = isset( $status['class'] ) ? (string) $status['class'] : '';
         $icon         = isset( $status['icon'] ) ? (string) $status['icon'] : 'info';
         $messages     = array();
+        $has_alert    = false;
 
         if ( ! empty( $status['messages'] ) && is_array( $status['messages'] ) ) {
             foreach ( $status['messages'] as $message ) {
@@ -308,6 +434,10 @@ class LUC_Dashboard_Frontend {
                     continue;
                 }
 
+                if ( in_array( $type, array( 'critical', 'attention' ), true ) ) {
+                    $has_alert = true;
+                }
+
                 $messages[] = array(
                     'type'    => $type,
                     'message' => $normalized,
@@ -324,32 +454,32 @@ class LUC_Dashboard_Frontend {
         ?>
         <div class="lucd-card <?php echo esc_attr( $status_class ); ?>" data-section="<?php echo esc_attr( $section ); ?>">
             <h3><?php echo esc_html( $title ); ?></h3>
-            <div class="lucd-card-icon lucd-icon-<?php echo esc_attr( $icon ); ?>"></div>
+            <?php if ( ! $has_alert ) : ?>
+                <div class="lucd-card-icon lucd-icon-<?php echo esc_attr( $icon ); ?>"></div>
+            <?php endif; ?>
             <div class="lucd-card-messages">
                 <?php foreach ( $messages as $message ) : ?>
                     <?php
-                    $type    = isset( $message['type'] ) ? (string) $message['type'] : 'info';
-                    $text    = isset( $message['message'] ) ? $message['message'] : '';
-                    $classes = array( 'lucd-card-message' );
-                    $icon_html = '';
+                    $type       = isset( $message['type'] ) ? (string) $message['type'] : 'info';
+                    $text       = isset( $message['message'] ) ? $message['message'] : '';
+                    $classes    = array( 'lucd-card-message' );
+                    $icon_class = '';
+                    $label      = '';
 
                     if ( in_array( $type, array( 'critical', 'attention' ), true ) ) {
-                        $icon_class = 'critical' === $type ? 'lucd-alert-icon-critical' : 'lucd-alert-icon-attention';
+                        $icon_class = 'critical' === $type ? 'lucd-icon-critical' : 'lucd-icon-warning';
                         $label      = self::get_alert_label( $type );
-                        $icon_html  = '<span class="lucd-alert-icon ' . esc_attr( $icon_class ) . '" aria-hidden="true"></span>';
-
-                        if ( '' !== $label ) {
-                            $icon_html .= '<span class="lucd-visually-hidden">' . esc_html( $label ) . ':</span>';
-                        }
-
-                        $classes[] = 'lucd-card-message-alert';
+                        $classes[]  = 'lucd-card-message-alert';
                     }
                     ?>
                     <div class="<?php echo esc_attr( implode( ' ', array_unique( $classes ) ) ); ?>">
-                        <?php if ( '' !== $icon_html ) : ?>
-                            <?php echo $icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                        <?php endif; ?>
                         <span class="lucd-card-message-text">
+                            <?php if ( '' !== $icon_class ) : ?>
+                                <span class="lucd-card-message-icon <?php echo esc_attr( $icon_class ); ?>" aria-hidden="true"></span>
+                                <?php if ( '' !== $label ) : ?>
+                                    <span class="lucd-visually-hidden"><?php echo esc_html( $label ); ?>:</span>
+                                <?php endif; ?>
+                            <?php endif; ?>
                             <?php if ( '' === $text ) : ?>
                                 &nbsp;
                             <?php else : ?>
@@ -544,27 +674,6 @@ class LUC_Dashboard_Frontend {
             echo '</div>';
         }
         echo '</div>';
-    }
-
-    /**
-     * Format a labelled note for display.
-     *
-     * @param string $label Optional label describing the note subject.
-     * @param string $note  The note text.
-     * @return string
-     */
-    private static function format_labelled_note( $label, $note ) {
-        $normalized_note = self::normalize_note( $note );
-        if ( '' === $normalized_note ) {
-            return '';
-        }
-
-        $normalized_label = self::normalize_note( $label );
-        if ( '' === $normalized_label ) {
-            return $normalized_note;
-        }
-
-        return sprintf( '%s - %s', $normalized_label, $normalized_note );
     }
 
     /**
@@ -1093,21 +1202,22 @@ class LUC_Dashboard_Frontend {
     /**
      * Build Projects & Services section markup.
      *
-     * @param int $user_id Current user ID.
+     * @param int      $user_id   Current user ID.
+     * @param int|null $client_id Optional client ID override for administrators.
      * @return string
      */
-    private static function get_projects_section( $user_id ) {
+    private static function get_projects_section( $user_id, $client_id = null ) {
         global $wpdb;
 
-        $clients_table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
         $projects_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::projects_table() );
 
-        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+        $client = self::get_client_record( $user_id, $client_id );
         if ( ! $client ) {
             return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
         }
 
-        $projects = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$projects_table} WHERE client_id = %d", (int) $client['client_id'] ), ARRAY_A );
+        $target_client_id = (int) $client['client_id'];
+        $projects = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$projects_table} WHERE client_id = %d", $target_client_id ), ARRAY_A );
         if ( empty( $projects ) ) {
             return '<p>' . esc_html__( 'No projects found.', 'lucd' ) . '</p>';
         }
@@ -1117,9 +1227,15 @@ class LUC_Dashboard_Frontend {
         $project_critical  = array();
         $project_attention = array();
         foreach ( $projects as $project ) {
-            $label               = isset( $project['project_name'] ) ? $project['project_name'] : '';
-            $project_critical[]  = self::format_labelled_note( $label, isset( $project['critical_issue'] ) ? $project['critical_issue'] : '' );
-            $project_attention[] = self::format_labelled_note( $label, isset( $project['attention_needed'] ) ? $project['attention_needed'] : '' );
+            $critical_note = isset( $project['critical_issue'] ) ? $project['critical_issue'] : '';
+            if ( '' !== self::normalize_note( $critical_note ) ) {
+                $project_critical[] = $critical_note;
+            }
+
+            $attention_note = isset( $project['attention_needed'] ) ? $project['attention_needed'] : '';
+            if ( '' !== self::normalize_note( $attention_note ) ) {
+                $project_attention[] = $attention_note;
+            }
         }
 
         $alerts = self::prepare_alert_items( $project_critical, $project_attention );
@@ -1153,24 +1269,26 @@ class LUC_Dashboard_Frontend {
     /**
      * Build Support Tickets section markup.
      *
-     * @param int $user_id Current user ID.
+     * @param int      $user_id   Current user ID.
+     * @param int|null $client_id Optional client ID override for administrators.
      * @return string
      */
-    private static function get_tickets_section( $user_id ) {
+    private static function get_tickets_section( $user_id, $client_id = null ) {
         global $wpdb;
 
-        $clients_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
         $tickets_table = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::tickets_table() );
 
-        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$clients_table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+        $client = self::get_client_record( $user_id, $client_id );
         if ( ! $client ) {
             return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
         }
 
+        $target_client_id = (int) $client['client_id'];
+
         $tickets = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT * FROM {$tickets_table} WHERE client_id = %d ORDER BY creation_datetime DESC",
-                (int) $client['client_id']
+                $target_client_id
             ),
             ARRAY_A
         );
@@ -1185,11 +1303,15 @@ class LUC_Dashboard_Frontend {
         $ticket_attention = array();
 
         foreach ( $tickets as $ticket ) {
-            $ticket_number = isset( $ticket['ticket_id'] ) ? (int) $ticket['ticket_id'] : 0;
-            $label         = $ticket_number ? sprintf( __( 'Ticket #%d', 'lucd' ), $ticket_number ) : __( 'Ticket', 'lucd' );
+            $critical_note = self::normalize_note( isset( $ticket['critical_issue'] ) ? $ticket['critical_issue'] : '' );
+            if ( '' !== $critical_note ) {
+                $ticket_critical[] = $critical_note;
+            }
 
-            $ticket_critical[]  = self::format_labelled_note( $label, isset( $ticket['critical_issue'] ) ? $ticket['critical_issue'] : '' );
-            $ticket_attention[] = self::format_labelled_note( $label, isset( $ticket['attention_needed'] ) ? $ticket['attention_needed'] : '' );
+            $attention_note = self::normalize_note( isset( $ticket['attention_needed'] ) ? $ticket['attention_needed'] : '' );
+            if ( '' !== $attention_note ) {
+                $ticket_attention[] = $attention_note;
+            }
         }
 
         $alerts = self::prepare_alert_items( $ticket_critical, $ticket_attention );
@@ -1267,14 +1389,12 @@ class LUC_Dashboard_Frontend {
     /**
      * Get profile information markup for the current user.
      *
-     * @param int $user_id WordPress user ID.
+     * @param int      $user_id   WordPress user ID.
+     * @param int|null $client_id Optional client ID override for administrators.
      * @return string
      */
-    private static function get_profile_section( $user_id ) {
-        global $wpdb;
-
-        $table  = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-        $client = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+    private static function get_profile_section( $user_id, $client_id = null ) {
+        $client = self::get_client_record( $user_id, $client_id );
 
         if ( ! $client ) {
             return '<p>' . esc_html__( 'Client record not found.', 'lucd' ) . '</p>';
@@ -1286,6 +1406,8 @@ class LUC_Dashboard_Frontend {
             array( isset( $client['critical_issue'] ) ? $client['critical_issue'] : '' ),
             array( isset( $client['attention_needed'] ) ? $client['attention_needed'] : '' )
         );
+
+        $target_client_id = isset( $client['client_id'] ) ? (int) $client['client_id'] : 0;
 
         ob_start();
         self::render_alert_bar( $profile_alerts );
@@ -1328,6 +1450,9 @@ class LUC_Dashboard_Frontend {
         </div>
         <form class="lucd-profile-edit" style="display:none;" enctype="multipart/form-data">
             <input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'lucd_save_profile' ) ); ?>" />
+            <?php if ( current_user_can( 'manage_options' ) && $target_client_id ) : ?>
+                <input type="hidden" name="client_id" value="<?php echo esc_attr( $target_client_id ); ?>" />
+            <?php endif; ?>
             <?php foreach ( $fields as $field => $info ) : ?>
                 <?php
                 if ( ! empty( $info['admin_only'] ) ) {
@@ -1381,6 +1506,27 @@ class LUC_Dashboard_Frontend {
         }
 
         $user_id = get_current_user_id();
+        $acting_as_admin = current_user_can( 'manage_options' );
+        $requested_client_id = 0;
+
+        if ( $acting_as_admin && isset( $_POST['client_id'] ) ) {
+            $requested_client_id = absint( wp_unslash( $_POST['client_id'] ) );
+        }
+
+        $override_client_id = ( $acting_as_admin && $requested_client_id ) ? $requested_client_id : null;
+
+        $client = self::get_client_record( $user_id, $override_client_id );
+        if ( ! $client ) {
+            wp_send_json_error( __( 'Client record not found.', 'lucd' ) );
+        }
+
+        $target_client_id = isset( $client['client_id'] ) ? (int) $client['client_id'] : 0;
+        $target_user_id   = isset( $client['wp_user_id'] ) ? (int) $client['wp_user_id'] : 0;
+        $is_impersonating = $acting_as_admin && $requested_client_id && $target_client_id === $requested_client_id;
+
+        if ( ! $target_user_id ) {
+            $target_user_id = $is_impersonating ? 0 : $user_id;
+        }
 
         $fields = LUC_D_Helpers::get_client_fields();
         unset( $fields['client_since'] );
@@ -1452,25 +1598,31 @@ class LUC_Dashboard_Frontend {
             $formats[]            = '%d';
         }
 
-        $userdata = array(
-            'ID'         => $user_id,
-            'user_email' => $data['email'],
-            'first_name' => $data['first_name'],
-            'last_name'  => $data['last_name'],
-        );
-        $result = wp_update_user( $userdata );
-        if ( is_wp_error( $result ) ) {
-            wp_send_json_error( $result->get_error_message() );
+        if ( $target_user_id > 0 ) {
+            $userdata = array(
+                'ID'         => $target_user_id,
+                'user_email' => $data['email'],
+                'first_name' => $data['first_name'],
+                'last_name'  => $data['last_name'],
+            );
+            $result = wp_update_user( $userdata );
+            if ( is_wp_error( $result ) ) {
+                wp_send_json_error( $result->get_error_message() );
+            }
         }
 
         global $wpdb;
         $table   = Level_Up_Client_Dashboard::get_table_name( Level_Up_Client_Dashboard::clients_table() );
-        $updated = $wpdb->update( $table, $data, array( 'wp_user_id' => $user_id ), $formats, array( '%d' ) );
+        $where   = $is_impersonating && $target_client_id ? array( 'client_id' => $target_client_id ) : array( 'wp_user_id' => $user_id );
+        $updated = $wpdb->update( $table, $data, $where, $formats, array( '%d' ) );
 
         if ( false === $updated ) {
             wp_send_json_error( __( 'Could not update profile.', 'lucd' ) );
         }
 
-        wp_send_json_success( self::get_profile_section( $user_id ) );
+        $refresh_user_id   = $target_user_id > 0 ? $target_user_id : $user_id;
+        $refresh_client_id = $is_impersonating && $target_client_id ? $target_client_id : null;
+
+        wp_send_json_success( self::get_profile_section( $refresh_user_id, $refresh_client_id ) );
     }
 }

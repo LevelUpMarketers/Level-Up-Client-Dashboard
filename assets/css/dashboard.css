@@ -32,6 +32,52 @@
     margin-bottom:100px;
 }
 
+.lucd-dashboard-welcome,
+.lucd-dashboard-client-switcher {
+    flex: 0 0 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.lucd-dashboard-welcome-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.lucd-dashboard-welcome-icon-wrapper {
+    flex: 0 0 auto;
+}
+
+.lucd-dashboard-welcome-icon {
+    display: block;
+    width: 48px;
+    height: auto;
+}
+
+.lucd-dashboard-client-switcher-label {
+    flex: 0 0 auto;
+    font-weight: 600;
+}
+
+.lucd-dashboard-client-switcher-control {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.lucd-dashboard-client-select {
+    width: 100%;
+    max-width: 320px;
+}
+
+.lucd-client-selection-message {
+    margin: 0 0 20px;
+    font-style: italic;
+}
+
 .lucd-dashboard .lucd-nav {
     flex: 0 0 25%;
     max-width: 25%;
@@ -327,8 +373,18 @@
     margin-bottom: 0;
 }
 
+
 .lucd-card-message-text {
     flex: 1 1 auto;
+    display: block;
+}
+
+.lucd-card-message-icon {
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: block;
 }
 
 .lucd-card-message-alert .lucd-card-message-text {
