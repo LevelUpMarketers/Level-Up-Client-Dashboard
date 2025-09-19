@@ -328,28 +328,26 @@ class LUC_Dashboard_Frontend {
             <div class="lucd-card-messages">
                 <?php foreach ( $messages as $message ) : ?>
                     <?php
-                    $type    = isset( $message['type'] ) ? (string) $message['type'] : 'info';
-                    $text    = isset( $message['message'] ) ? $message['message'] : '';
-                    $classes = array( 'lucd-card-message' );
-                    $icon_html = '';
+                    $type       = isset( $message['type'] ) ? (string) $message['type'] : 'info';
+                    $text       = isset( $message['message'] ) ? $message['message'] : '';
+                    $classes    = array( 'lucd-card-message' );
+                    $icon_class = '';
+                    $label      = '';
 
                     if ( in_array( $type, array( 'critical', 'attention' ), true ) ) {
-                        $icon_class = 'critical' === $type ? 'lucd-alert-icon-critical' : 'lucd-alert-icon-attention';
+                        $icon_class = 'critical' === $type ? 'lucd-icon-critical' : 'lucd-icon-warning';
                         $label      = self::get_alert_label( $type );
-                        $icon_html  = '<span class="lucd-alert-icon ' . esc_attr( $icon_class ) . '" aria-hidden="true"></span>';
-
-                        if ( '' !== $label ) {
-                            $icon_html .= '<span class="lucd-visually-hidden">' . esc_html( $label ) . ':</span>';
-                        }
-
-                        $classes[] = 'lucd-card-message-alert';
+                        $classes[]  = 'lucd-card-message-alert';
                     }
                     ?>
                     <div class="<?php echo esc_attr( implode( ' ', array_unique( $classes ) ) ); ?>">
-                        <?php if ( '' !== $icon_html ) : ?>
-                            <?php echo $icon_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                        <?php endif; ?>
                         <span class="lucd-card-message-text">
+                            <?php if ( '' !== $icon_class ) : ?>
+                                <span class="lucd-card-message-icon <?php echo esc_attr( $icon_class ); ?>" aria-hidden="true"></span>
+                                <?php if ( '' !== $label ) : ?>
+                                    <span class="lucd-visually-hidden"><?php echo esc_html( $label ); ?>:</span>
+                                <?php endif; ?>
+                            <?php endif; ?>
                             <?php if ( '' === $text ) : ?>
                                 &nbsp;
                             <?php else : ?>
