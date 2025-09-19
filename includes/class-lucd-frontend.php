@@ -290,6 +290,7 @@ class LUC_Dashboard_Frontend {
         $status_class = isset( $status['class'] ) ? (string) $status['class'] : '';
         $icon         = isset( $status['icon'] ) ? (string) $status['icon'] : 'info';
         $messages     = array();
+        $has_alert    = false;
 
         if ( ! empty( $status['messages'] ) && is_array( $status['messages'] ) ) {
             foreach ( $status['messages'] as $message ) {
@@ -308,6 +309,10 @@ class LUC_Dashboard_Frontend {
                     continue;
                 }
 
+                if ( in_array( $type, array( 'critical', 'attention' ), true ) ) {
+                    $has_alert = true;
+                }
+
                 $messages[] = array(
                     'type'    => $type,
                     'message' => $normalized,
@@ -324,7 +329,9 @@ class LUC_Dashboard_Frontend {
         ?>
         <div class="lucd-card <?php echo esc_attr( $status_class ); ?>" data-section="<?php echo esc_attr( $section ); ?>">
             <h3><?php echo esc_html( $title ); ?></h3>
-            <div class="lucd-card-icon lucd-icon-<?php echo esc_attr( $icon ); ?>"></div>
+            <?php if ( ! $has_alert ) : ?>
+                <div class="lucd-card-icon lucd-icon-<?php echo esc_attr( $icon ); ?>"></div>
+            <?php endif; ?>
             <div class="lucd-card-messages">
                 <?php foreach ( $messages as $message ) : ?>
                     <?php

@@ -330,9 +330,7 @@
 
 .lucd-card-message-text {
     flex: 1 1 auto;
-    display: inline-flex;
-    align-items: flex-start;
-    gap: 6px;
+    display: block;
 }
 
 .lucd-card-message-icon {
@@ -340,6 +338,7 @@
     line-height: 1;
     flex-shrink: 0;
     margin-top: 2px;
+    display: block;
 }
 
 .lucd-card-message-alert .lucd-card-message-text {
